@@ -14,6 +14,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PacientesIdRouteImport } from './routes/pacientes.$id'
+import { Route as ApiPublicExtensionGenerateRouteImport } from './routes/api/public/extension/generate'
+import { Route as ApiPublicExtensionConfirmRouteImport } from './routes/api/public/extension/confirm'
 
 const PacientesRoute = PacientesRouteImport.update({
   id: '/pacientes',
@@ -40,6 +42,18 @@ const PacientesIdRoute = PacientesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => PacientesRoute,
 } as any)
+const ApiPublicExtensionGenerateRoute =
+  ApiPublicExtensionGenerateRouteImport.update({
+    id: '/api/public/extension/generate',
+    path: '/api/public/extension/generate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicExtensionConfirmRoute =
+  ApiPublicExtensionConfirmRouteImport.update({
+    id: '/api/public/extension/confirm',
+    path: '/api/public/extension/confirm',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +61,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
+  '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
+  '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +70,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
+  '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
+  '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,12 +80,28 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
+  '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
+  '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/configuracoes' | '/login' | '/pacientes' | '/pacientes/$id'
+  fullPaths:
+    | '/'
+    | '/configuracoes'
+    | '/login'
+    | '/pacientes'
+    | '/pacientes/$id'
+    | '/api/public/extension/confirm'
+    | '/api/public/extension/generate'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/configuracoes' | '/login' | '/pacientes' | '/pacientes/$id'
+  to:
+    | '/'
+    | '/configuracoes'
+    | '/login'
+    | '/pacientes'
+    | '/pacientes/$id'
+    | '/api/public/extension/confirm'
+    | '/api/public/extension/generate'
   id:
     | '__root__'
     | '/'
@@ -75,6 +109,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/pacientes'
     | '/pacientes/$id'
+    | '/api/public/extension/confirm'
+    | '/api/public/extension/generate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -82,6 +118,8 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   LoginRoute: typeof LoginRoute
   PacientesRoute: typeof PacientesRouteWithChildren
+  ApiPublicExtensionConfirmRoute: typeof ApiPublicExtensionConfirmRoute
+  ApiPublicExtensionGenerateRoute: typeof ApiPublicExtensionGenerateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -121,6 +159,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PacientesIdRouteImport
       parentRoute: typeof PacientesRoute
     }
+    '/api/public/extension/generate': {
+      id: '/api/public/extension/generate'
+      path: '/api/public/extension/generate'
+      fullPath: '/api/public/extension/generate'
+      preLoaderRoute: typeof ApiPublicExtensionGenerateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/extension/confirm': {
+      id: '/api/public/extension/confirm'
+      path: '/api/public/extension/confirm'
+      fullPath: '/api/public/extension/confirm'
+      preLoaderRoute: typeof ApiPublicExtensionConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -141,7 +193,19 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   LoginRoute: LoginRoute,
   PacientesRoute: PacientesRouteWithChildren,
+  ApiPublicExtensionConfirmRoute: ApiPublicExtensionConfirmRoute,
+  ApiPublicExtensionGenerateRoute: ApiPublicExtensionGenerateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
