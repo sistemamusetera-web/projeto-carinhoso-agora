@@ -359,6 +359,19 @@
     };
     chatState.terapeuta = cachedTher;
     renderSig(cachedTher);
+    // Auto-preenche já com cache, se houver
+    if (cachedTher && (cachedTher.nome || cachedTher.conselho || cachedTher.especialidade)) {
+      autoFillTherapistWhenReady(panel);
+    }
+    // Busca dados atualizados do terapeuta no painel
+    sendBgMessage({ type: "fetch-therapist" }, 15000).then((r) => {
+      if (r?.ok && r.data?.terapeuta) {
+        chatState.terapeuta = r.data.terapeuta;
+        try { chrome.storage.local.set({ terapeuta: r.data.terapeuta }); } catch (e) {}
+        renderSig(r.data.terapeuta);
+        autoFillTherapistWhenReady(panel);
+      }
+    });
     const openConfigPage = async () => {
       const c = await getConfig();
       const url = (c.panelUrl || "").replace(/\/$/, "");
@@ -607,6 +620,23 @@
       setNativeValue(target.el, cur + buildSignatureBlock(t));
       return true;
     } catch (e) { return false; }
+  }
+
+  // Auto-preenche os campos de assinatura assim que o formulário aparecer.
+  // Tenta por ~10s caso os campos ainda não estejam renderizados.
+  function autoFillTherapistWhenReady(panel) {
+    const t = chatState?.terapeuta;
+    if (!t || (!t.nome && !t.conselho && !t.especialidade)) return;
+    let tries = 0;
+    const maxTries = 20; // ~10s
+    const tick = () => {
+      tries++;
+      if (!document.body.contains(panel)) return;
+      const n = fillTherapistFields(t);
+      if (n > 0 || tries >= maxTries) return;
+      setTimeout(tick, 500);
+    };
+    tick();
   }
 
   function fillTherapistFields(t) {

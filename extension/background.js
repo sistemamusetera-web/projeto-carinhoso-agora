@@ -24,7 +24,7 @@ chrome.action.onClicked.addListener(async (tab) => {
 });
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg?.type !== "generate" && msg?.type !== "confirm" && msg?.type !== "chat-generate") return;
+  if (msg?.type !== "generate" && msg?.type !== "confirm" && msg?.type !== "chat-generate" && msg?.type !== "fetch-therapist") return;
 
   (async () => {
     try {
@@ -37,8 +37,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         generate: "/api/public/extension/generate",
         confirm: "/api/public/extension/confirm",
         "chat-generate": "/api/public/extension/chat-generate",
+        "fetch-therapist": "/api/public/extension/therapist",
       };
       const url = `${cfg.panelUrl.replace(/\/$/, "")}${pathMap[msg.type]}`;
+      const method = msg.type === "fetch-therapist" ? "GET" : "POST";
 
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 80000);
@@ -46,9 +48,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       let resp;
       try {
         resp = await fetch(url, {
-          method: "POST",
+          method,
           headers: { "Content-Type": "application/json", "x-api-key": cfg.apiKey },
-          body: JSON.stringify(msg.payload ?? {}),
+          body: method === "GET" ? undefined : JSON.stringify(msg.payload ?? {}),
           signal: ctrl.signal,
         });
       } catch (e) {
