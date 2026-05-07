@@ -359,6 +359,19 @@
     };
     chatState.terapeuta = cachedTher;
     renderSig(cachedTher);
+    // Auto-preenche já com cache, se houver
+    if (cachedTher && (cachedTher.nome || cachedTher.conselho || cachedTher.especialidade)) {
+      autoFillTherapistWhenReady(panel);
+    }
+    // Busca dados atualizados do terapeuta no painel
+    sendBgMessage({ type: "fetch-therapist" }, 15000).then((r) => {
+      if (r?.ok && r.data?.terapeuta) {
+        chatState.terapeuta = r.data.terapeuta;
+        try { chrome.storage.local.set({ terapeuta: r.data.terapeuta }); } catch (e) {}
+        renderSig(r.data.terapeuta);
+        autoFillTherapistWhenReady(panel);
+      }
+    });
     const openConfigPage = async () => {
       const c = await getConfig();
       const url = (c.panelUrl || "").replace(/\/$/, "");
