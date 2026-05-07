@@ -552,6 +552,7 @@
     const camposResp = resp.data?.campos || {};
     const terapeuta = resp.data?.terapeuta || {};
     const filledTher = fillTherapistFields(terapeuta);
+    if (chatState.renderSig) chatState.renderSig(terapeuta);
     const filled = fillFields(camposResp);
     const therMsg = filledTher ? ` (+${filledTher} dado(s) do terapeuta)` : "";
     chatState.messages.push({
