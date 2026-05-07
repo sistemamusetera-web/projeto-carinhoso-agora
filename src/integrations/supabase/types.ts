@@ -14,7 +14,137 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          nome: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          nome?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          nome?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      evolucoes: {
+        Row: {
+          confirmada: boolean
+          conteudo: string
+          created_at: string
+          id: string
+          origem: string
+          paciente_id: string
+          user_id: string
+        }
+        Insert: {
+          confirmada?: boolean
+          conteudo: string
+          created_at?: string
+          id?: string
+          origem?: string
+          paciente_id: string
+          user_id: string
+        }
+        Update: {
+          confirmada?: boolean
+          conteudo?: string
+          created_at?: string
+          id?: string
+          origem?: string
+          paciente_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evolucoes_paciente_id_fkey"
+            columns: ["paciente_id"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pacientes: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          estilo: string
+          id: string
+          nome: string
+          nome_externo_id: string | null
+          objetivos: string
+          perfil: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          estilo?: string
+          id?: string
+          nome: string
+          nome_externo_id?: string | null
+          objetivos?: string
+          perfil?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          estilo?: string
+          id?: string
+          nome?: string
+          nome_externo_id?: string | null
+          objetivos?: string
+          perfil?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      prompt_config: {
+        Row: {
+          estilo_padrao: string
+          modelo: string
+          system_prompt: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          estilo_padrao?: string
+          modelo?: string
+          system_prompt?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          estilo_padrao?: string
+          modelo?: string
+          system_prompt?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
