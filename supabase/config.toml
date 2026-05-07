@@ -1,1 +1,4 @@
 project_id = "yyezpzuasyyuhobhgktl"
+
+[functions.gerar-evolucao]
+verify_jwt = true
