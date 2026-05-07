@@ -116,6 +116,30 @@ function ConfigPage() {
           <p className="mt-1 text-muted-foreground">Ajuste o prompt da IA, gerencie chaves da extensão e baixe o instalador.</p>
         </div>
 
+        {c && (
+          <Card className="p-6">
+            <h2 className="font-display text-xl font-semibold">Assinatura do terapeuta responsável pela evolução</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Esses dados são inseridos automaticamente no campo Assinatura de cada evolução gerada pela extensão. A data é preenchida com a data de hoje.</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div className="space-y-2"><Label>Nome</Label>
+                <Input value={c.terapeuta_nome ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_nome: e.target.value })} />
+              </div>
+              <div className="space-y-2"><Label>Conselho / CPF</Label>
+                <Input placeholder="Ex.: CRP 06/12345" value={c.terapeuta_conselho ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_conselho: e.target.value })} />
+              </div>
+              <div className="space-y-2"><Label>Especialidade</Label>
+                <Input value={c.terapeuta_especialidade ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_especialidade: e.target.value })} />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" disabled={!promptForm} onClick={() => setPromptForm(null)}>Cancelar</Button>
+              <Button disabled={!promptForm || savePrompt.isPending} onClick={() => savePrompt.mutate()} className="gap-1.5">
+                <Save className="h-4 w-4" /> Salvar
+              </Button>
+            </div>
+          </Card>
+        )}
+
         <Card className="p-6">
           <h2 className="font-display text-xl font-semibold">Extensão Chrome</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -169,31 +193,6 @@ function ConfigPage() {
             ))}
           </div>
         </Card>
-
-        {c && (
-          <Card className="p-6">
-            <h2 className="font-display text-xl font-semibold">Assinatura do terapeuta responsável pela evolução</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Esses dados são inseridos automaticamente no campo Assinatura de cada evolução gerada pela extensão. A data é preenchida com a data de hoje.</p>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <div className="space-y-2"><Label>Nome</Label>
-                <Input value={c.terapeuta_nome ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_nome: e.target.value })} />
-              </div>
-              <div className="space-y-2"><Label>Conselho / CPF</Label>
-                <Input placeholder="Ex.: CRP 06/12345" value={c.terapeuta_conselho ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_conselho: e.target.value })} />
-              </div>
-              <div className="space-y-2"><Label>Especialidade</Label>
-                <Input value={c.terapeuta_especialidade ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_especialidade: e.target.value })} />
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="outline" disabled={!promptForm} onClick={() => setPromptForm(null)}>Cancelar</Button>
-              <Button disabled={!promptForm || savePrompt.isPending} onClick={() => savePrompt.mutate()} className="gap-1.5">
-                <Save className="h-4 w-4" /> Salvar
-              </Button>
-            </div>
-          </Card>
-        )}
-
         {c && (
           <Card className="p-6">
             <h2 className="font-display text-xl font-semibold">Prompt e modelo</h2>
