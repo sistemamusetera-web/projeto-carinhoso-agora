@@ -1,11 +1,8 @@
-// Agente de Evolução Terapêutica — content script
-// Injeta botão "Gerar evolução com IA" e abre um chat lateral onde o
-// terapeuta descreve a sessão. A IA devolve JSON estruturado por campo
-// e a extensão preenche cada campo do formulário do Clínica nas Nuvens.
+// Agente de Evolução Terapêutica — content script v0.2.1
+// Detecção robusta de campos do Clínica nas Nuvens + mensageria com timeout.
 
 (function () {
   const BTN_CLASS = "evo-ai-btn";
-  const PROCESSED = "data-evo-ai-processed";
   let chatState = null; // { messages, fields, pacienteNome, pacienteIdExterno }
 
   // ------------------- helpers -------------------
@@ -28,18 +25,19 @@
       .trim();
   }
 
-  // ------------------- detecção de paciente -------------------
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  // ------------------- paciente -------------------
   function detectPatientFromPage() {
-    // Tela de atendimento aberto: nome em h1/h2 ou no topo
     const headings = Array.from(document.querySelectorAll("h1, h2, h3, [class*='nome'], [class*='paciente']"));
     for (const h of headings) {
       const t = (h.innerText || "").trim();
-      // nomes em CAPS LOCK no Clínica nas Nuvens
       if (t && /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{6,}/.test(t.split("\n")[0])) {
         return { nome: t.split("\n")[0].trim(), externalId: extractIdFromUrl() };
       }
     }
-    // fallback: pega primeiro nome em caps no topo
     const all = document.body.innerText.split("\n").map((s) => s.trim()).filter(Boolean);
     const found = all.find((l) => /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{5,}$/.test(l));
     return { nome: found || "", externalId: extractIdFromUrl() };
@@ -51,20 +49,125 @@
   }
 
   // ------------------- detecção de campos -------------------
+  const IGNORE_LABEL_RX = /^(obrigat[óo]rio|opcional|texto|campo|sele[çc][aã]o|pesquisar|buscar|filtrar)$/i;
+  const IGNORE_PLACEHOLDER_RX = /(pesquisar|buscar|filtrar|selecione)/i;
+
+  function isVisible(el) {
+    if (!el || el.offsetParent === null) return false;
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+
+  function isInsideChrome(el) {
+    // ignora inputs dentro de barra lateral, header global, sidebar do chat
+    return !!el.closest(".evo-chat, nav, header, [class*='sidebar'], [class*='Sidebar'], [class*='menu'], [class*='Menu'], [role='navigation']");
+  }
+
+  async function preScrollEvolutionPanel() {
+    // Tenta achar o container scrollável que contém um label "Obrigatório" (típico do form)
+    const candidate = Array.from(document.querySelectorAll("div"))
+      .filter((d) => isVisible(d) && d.scrollHeight > d.clientHeight + 50)
+      .find((d) => /Obrigat[óo]rio/i.test(d.innerText || ""));
+    if (!candidate) return;
+    const original = candidate.scrollTop;
+    const max = candidate.scrollHeight;
+    for (let y = 0; y <= max; y += Math.max(200, candidate.clientHeight - 50)) {
+      candidate.scrollTop = y;
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    candidate.scrollTop = original;
+    await new Promise((r) => setTimeout(r, 120));
+  }
+
+  function findFieldCardLabel(el) {
+    // Sobe a árvore até achar um container que envolve UM input/textarea visível
+    // e contém um texto curto identificando o campo.
+    let cur = el.parentElement;
+    let best = null;
+    for (let depth = 0; depth < 8 && cur; depth++) {
+      const inputs = cur.querySelectorAll("input[type='text'], input:not([type]), textarea");
+      if (inputs.length > 1) break; // saímos do escopo do campo
+      // textos diretos no card, antes do input
+      const texts = collectLeadingTexts(cur, el);
+      const label = pickBestLabel(texts);
+      if (label) best = label;
+      if (best && cur.querySelector(":scope > label, :scope > div, :scope > span, :scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > h4")) {
+        return best;
+      }
+      cur = cur.parentElement;
+    }
+    return best;
+  }
+
+  function collectLeadingTexts(container, inputEl) {
+    // Pega elementos de texto que aparecem antes do input no DOM order
+    const texts = [];
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT, null);
+    let node = walker.nextNode();
+    while (node) {
+      if (node === inputEl || node.contains(inputEl)) {
+        if (node === inputEl) break;
+        node = walker.nextNode();
+        continue;
+      }
+      if (node.children.length === 0 || ["LABEL","SPAN","P","DIV","H1","H2","H3","H4","STRONG","B"].includes(node.tagName)) {
+        const t = (node.innerText || node.textContent || "").trim();
+        if (t) texts.push(t.split("\n")[0].trim());
+      }
+      node = walker.nextNode();
+    }
+    return texts;
+  }
+
+  function pickBestLabel(texts) {
+    for (const raw of texts) {
+      const t = cleanLabel(raw);
+      if (!t) continue;
+      if (t.length > 80) continue;
+      if (IGNORE_LABEL_RX.test(t)) continue;
+      if (/^[\d\s\-\/.:]+$/.test(t)) continue;
+      return t;
+    }
+    return null;
+  }
+
+  function cleanLabel(s) {
+    return (s || "")
+      .replace(/\*/g, "")
+      .replace(/\(obrigat[óo]rio\)/gi, "")
+      .replace(/obrigat[óo]rio/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function detectFormFields() {
-    // Procura textareas e inputs visíveis com um label/título acima
-    const inputs = Array.from(document.querySelectorAll("textarea, input[type='text']")).filter(
-      (el) => el.offsetParent !== null && !el.disabled && !el.readOnly
+    const inputs = Array.from(document.querySelectorAll("textarea, input[type='text'], input:not([type])")).filter(
+      (el) => isVisible(el) && !el.disabled && !el.readOnly && !isInsideChrome(el)
     );
     const fields = [];
     for (const el of inputs) {
-      const label = findLabelFor(el);
+      // ignora inputs pequenos com placeholder de busca
+      if (el.tagName === "INPUT" && el.offsetWidth < 220 && IGNORE_PLACEHOLDER_RX.test(el.placeholder || "")) continue;
+      let label = null;
+      // 1) <label for>
+      if (el.id) {
+        const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        if (lab) label = cleanLabel(lab.innerText);
+      }
+      // 2) heurística do card
+      if (!label || IGNORE_LABEL_RX.test(label)) {
+        const cardLabel = findFieldCardLabel(el);
+        if (cardLabel) label = cardLabel;
+      }
+      // 3) aria-label
+      if (!label && el.getAttribute("aria-label")) label = cleanLabel(el.getAttribute("aria-label"));
+      // 4) placeholder, só se não for de busca
+      if (!label && el.placeholder && !IGNORE_PLACEHOLDER_RX.test(el.placeholder)) label = cleanLabel(el.placeholder);
       if (!label) continue;
-      // ignorar campos minúsculos (provavelmente busca/filtro)
-      if (el.tagName === "INPUT" && el.offsetWidth < 200) continue;
+      if (IGNORE_LABEL_RX.test(label)) continue;
       fields.push({ nome: label, el });
     }
-    // dedup por nome (mantém primeiro)
+    // dedup mantendo primeiro
     const seen = new Set();
     return fields.filter((f) => {
       const k = normalize(f.nome);
@@ -74,54 +177,14 @@
     });
   }
 
-  function findLabelFor(el) {
-    // 1) <label for="id">
-    if (el.id) {
-      const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
-      if (lab) return cleanLabel(lab.innerText);
-    }
-    // 2) ancestor label
-    const parentLabel = el.closest("label");
-    if (parentLabel) return cleanLabel(parentLabel.innerText.replace(el.value || "", ""));
-    // 3) sibling/anterior elemento de texto
-    let cur = el.parentElement;
-    for (let depth = 0; depth < 4 && cur; depth++) {
-      // procura headings/divs/spans com texto curto antes do input
-      const candidates = Array.from(cur.children);
-      const idx = candidates.indexOf(el.closest(cur.children[0]?.tagName || "*") || el);
-      for (let i = candidates.length - 1; i >= 0; i--) {
-        const c = candidates[i];
-        if (c === el || c.contains(el)) continue;
-        const txt = (c.innerText || "").trim().split("\n")[0];
-        if (txt && txt.length < 80 && !/^https?:/.test(txt)) {
-          return cleanLabel(txt);
-        }
-      }
-      cur = cur.parentElement;
-    }
-    // 4) placeholder
-    if (el.placeholder) return cleanLabel(el.placeholder);
-    return null;
-  }
-
-  function cleanLabel(s) {
-    return (s || "")
-      .replace(/\*/g, "")
-      .replace(/\(obrigat[óo]rio\)/gi, "")
-      .replace(/obrigat[óo]rio/gi, "")
-      .trim();
-  }
-
   // ------------------- chat panel -------------------
-  function openChat() {
+  async function openChat() {
     if (document.querySelector(".evo-chat")) return;
-    const fields = detectFormFields();
     const paciente = detectPatientFromPage();
-
     chatState = {
       pacienteNome: paciente.nome,
       pacienteIdExterno: paciente.externalId,
-      fields,
+      fields: [],
       messages: [
         {
           role: "assistant",
@@ -139,15 +202,13 @@
           <strong>Agente de Evolução</strong>
           <small>${paciente.nome ? escapeHtml(paciente.nome) : "Paciente não detectado"}</small>
         </div>
-        <button class="evo-chat-close" title="Fechar">×</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="evo-chat-redetect" title="Re-detectar campos">↻</button>
+          <button class="evo-chat-close" title="Fechar">×</button>
+        </div>
       </div>
-      <div class="evo-chat-fields">
-        ${
-          fields.length
-            ? `<b>${fields.length} campo(s) detectado(s):</b> ${fields.map((f) => escapeHtml(f.nome)).join(" · ")}`
-            : `<b>Nenhum campo de formulário detectado nesta tela.</b> Abra um atendimento com o modelo de evolução para preenchimento automático.`
-        }
-      </div>
+      <div class="evo-chat-fields">Detectando campos…</div>
+      <div class="evo-chat-status" style="display:none"></div>
       <div class="evo-chat-msgs"></div>
       <div class="evo-chat-input">
         <textarea placeholder="Descreva a sessão de hoje..."></textarea>
@@ -160,6 +221,7 @@
     document.body.appendChild(panel);
 
     panel.querySelector(".evo-chat-close").onclick = () => panel.remove();
+    panel.querySelector(".evo-chat-redetect").onclick = () => runDetection(panel);
     panel.querySelector(".evo-clear").onclick = () => {
       chatState.messages = chatState.messages.slice(0, 1);
       renderMsgs(panel);
@@ -181,10 +243,20 @@
     });
 
     renderMsgs(panel);
+    await runDetection(panel);
   }
 
-  function escapeHtml(s) {
-    return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  async function runDetection(panel) {
+    const fieldsBox = panel.querySelector(".evo-chat-fields");
+    fieldsBox.innerHTML = "Rolando o formulário para carregar todos os campos…";
+    await preScrollEvolutionPanel();
+    const fields = detectFormFields();
+    chatState.fields = fields;
+    if (!fields.length) {
+      fieldsBox.innerHTML = `<b>Nenhum campo detectado.</b> Abra um atendimento com o modelo de evolução, role o formulário e clique em ↻.`;
+    } else {
+      fieldsBox.innerHTML = `<b>${fields.length} campo(s):</b> ${fields.map((f) => escapeHtml(f.nome)).join(" · ")}`;
+    }
   }
 
   function renderMsgs(panel) {
@@ -199,56 +271,91 @@
     box.scrollTop = box.scrollHeight;
   }
 
+  function setStatus(panel, text) {
+    const s = panel.querySelector(".evo-chat-status");
+    if (!text) { s.style.display = "none"; s.textContent = ""; return; }
+    s.style.display = "block";
+    s.textContent = text;
+    s.style.cssText = "display:block;padding:6px 14px;background:#fef9c3;color:#713f12;font-size:11px;border-bottom:1px solid #fde68a;";
+  }
+
   function pushSystemMsg(panel, text) {
     chatState.messages.push({ role: "system", content: text });
     renderMsgs(panel);
   }
 
-  function generateAndFill(panel, sendBtn) {
+  // sendMessage com timeout e tratamento de lastError
+  function sendBgMessage(payload, timeoutMs = 90000) {
+    return new Promise((resolve) => {
+      let done = false;
+      const timer = setTimeout(() => {
+        if (done) return;
+        done = true;
+        resolve({ ok: false, error: `Timeout após ${Math.round(timeoutMs / 1000)}s. Tente novamente.` });
+      }, timeoutMs);
+      try {
+        chrome.runtime.sendMessage(payload, (resp) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          if (chrome.runtime.lastError) {
+            resolve({ ok: false, error: chrome.runtime.lastError.message || "Falha de comunicação com a extensão." });
+            return;
+          }
+          resolve(resp || { ok: false, error: "Resposta vazia da extensão." });
+        });
+      } catch (e) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve({ ok: false, error: e.message });
+      }
+    });
+  }
+
+  async function generateAndFill(panel, sendBtn) {
     if (!chatState.fields.length) {
-      pushSystemMsg(panel, "Nenhum campo detectado para preencher. Abra a tela do atendimento.");
+      pushSystemMsg(panel, "Nenhum campo detectado para preencher. Abra a tela do atendimento e clique em ↻.");
       return;
     }
     sendBtn.disabled = true;
     sendBtn.textContent = "Gerando…";
-    chrome.runtime.sendMessage(
-      {
-        type: "chat-generate",
-        payload: {
-          pacienteNome: chatState.pacienteNome,
-          pacienteIdExterno: chatState.pacienteIdExterno,
-          mensagens: chatState.messages.filter((m) => m.role !== "system"),
-          campos: chatState.fields.map((f) => f.nome),
-        },
+    setStatus(panel, "Enviando observações para a IA…");
+
+    const resp = await sendBgMessage({
+      type: "chat-generate",
+      payload: {
+        pacienteNome: chatState.pacienteNome,
+        pacienteIdExterno: chatState.pacienteIdExterno,
+        mensagens: chatState.messages.filter((m) => m.role !== "system"),
+        campos: chatState.fields.map((f) => f.nome),
       },
-      (resp) => {
-        sendBtn.disabled = false;
-        sendBtn.textContent = "Gerar e preencher";
-        if (!resp?.ok) {
-          pushSystemMsg(panel, "Erro: " + (resp?.error || "falha desconhecida"));
-          return;
-        }
-        const camposResp = resp.data?.campos || {};
-        const filled = fillFields(camposResp);
-        chatState.messages.push({
-          role: "assistant",
-          content:
-            `Preenchi ${filled} de ${chatState.fields.length} campo(s).\n\n` +
-            Object.entries(camposResp)
-              .map(([k, v]) => `▸ ${k}\n${v}`)
-              .join("\n\n") +
-            `\n\nRevise e ajuste antes de finalizar o atendimento. Se quiser refazer, descreva ajustes e clique novamente.`,
-        });
-        renderMsgs(panel);
-      }
-    );
+    });
+
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Gerar e preencher";
+    setStatus(panel, "");
+
+    if (!resp?.ok) {
+      pushSystemMsg(panel, "Erro: " + (resp?.error || "falha desconhecida"));
+      return;
+    }
+    const camposResp = resp.data?.campos || {};
+    const filled = fillFields(camposResp);
+    chatState.messages.push({
+      role: "assistant",
+      content:
+        `Preenchi ${filled} de ${chatState.fields.length} campo(s).\n\n` +
+        Object.entries(camposResp).map(([k, v]) => `▸ ${k}\n${v}`).join("\n\n") +
+        `\n\nRevise antes de finalizar. Para ajustar, descreva o que mudar e clique novamente.`,
+    });
+    renderMsgs(panel);
   }
 
   function fillFields(camposResp) {
     let count = 0;
     for (const f of chatState.fields) {
       const key = normalize(f.nome);
-      // match exato ou por inclusão
       let val = null;
       for (const [k, v] of Object.entries(camposResp)) {
         const nk = normalize(k);
