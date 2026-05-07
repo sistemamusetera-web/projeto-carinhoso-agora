@@ -134,7 +134,11 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
 
           const properties: Record<string, any> = {};
           for (const c of campos) {
-            properties[c] = { type: "string", description: `Conteúdo clínico para o campo "${c}"` };
+            properties[c] = {
+              type: "string",
+              minLength: 40,
+              description: `Texto clínico OBRIGATÓRIO para "${c}". Mínimo 3 frases (~40 palavras). NUNCA vazio, NUNCA "-", "N/A" ou frase genérica.`,
+            };
           }
 
           const tools = [
