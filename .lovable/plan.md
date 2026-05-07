@@ -1,48 +1,92 @@
-## Diagnóstico
+## Problema
 
-Pela captura você enviou:
+No print, o chat está conectado e detectou o paciente, mas mostra **"Nenhum campo detectado"**. Os textareas da evolução existem na mesma tela do Atendimento, porém só aparecem rolando para baixo — fora da viewport inicial.
 
-- O painel mostra **"1 campo(s) detectado(s): Texto"** — ou seja, a extensão **não está reconhecendo** os campos reais do formulário ("Como a criança chegou", "Recursos usados", "Dinâmicas usadas", etc.). Está achando só 1 input e dando o nome errado ("Texto", provavelmente vindo de um placeholder ou heading distante).
-- O botão fica preso em **"Gerando…"**: como só 1 campo foi enviado, a IA até pode responder, mas se o service worker da extensão dorme durante o fetch (>30s) o callback nunca volta, e a UI nunca sai do "Gerando…".
+A função atual `preScrollEvolutionPanel()` procura um container scrollável **interno** com a palavra "Obrigatório". Na tela do Clínica nas Nuvens, o scroll acontece na própria janela (não num div interno), então o pre-scroll não dispara e a detecção roda só com o que está acima da dobra.
 
-Causas:
+Além disso, o filtro atual descarta:
+- Inputs com largura `< 220px` que tenham placeholder de busca (correto)
+- Mas também perde alguns textareas/inputs cujo "label do card" está em outro nível da árvore não coberto pelas 8 camadas exploradas
 
-1. `findLabelFor()` percorre ancestrais de forma frágil — no Clínica nas Nuvens os rótulos ("Como a criança chegou", "Recursos usados"…) ficam em **divs irmãs acima** do `<input>`, não em `<label for=…>`. O fallback acaba pegando textos genéricos ("Texto").
-2. Os campos abaixo da dobra ("Dinâmicas usadas", "Comportamento"…) podem nem estar no DOM ainda enquanto não rola.
-3. O `chrome.runtime.sendMessage` espera o callback do background. Se a chamada à IA demora muito ou o worker é encerrado, a UI fica eternamente em "Gerando…" sem mensagem de erro.
-4. Não há timeout/retry visível para o usuário.
+## Solução
 
-## O que vou fazer
+### 1. Pre-scroll robusto (extension/content.js)
+Substituir `preScrollEvolutionPanel()` por uma rotina que:
+- Detecta TODOS os candidatos scrolláveis (incluindo `document.scrollingElement` e `window`)
+- Faz scroll completo da janela de cima até o fim e volta ao topo
+- Também rola qualquer container interno scrollável encontrado
+- Aguarda lazy-render entre passos (~120ms)
 
-### 1. Detecção de campos muito mais robusta (`extension/content.js`)
-- Antes de mapear, **rolar o painel da evolução até o fim** para forçar o React a montar todos os campos, depois voltar para o topo.
-- Trocar `findLabelFor` por uma heurística específica para o Clínica nas Nuvens:
-  - subir a árvore até encontrar um container "card de campo" (div que tem **um único input/textarea** dentro);
-  - dentro desse container, pegar o **primeiro texto curto** (≤ 80 chars) que **não** seja "Obrigatório", asterisco ou o próprio valor;
-  - se nada bater, cair para `<label for>` e por último `placeholder`.
-- Ignorar inputs de busca/menu (largura pequena, dentro de header/sidebar, com placeholder tipo "Pesquisar").
-- Mostrar no painel a lista detectada para você conferir antes de gerar.
+### 2. Auto re-detecção (extension/content.js)
+Adicionar um `MutationObserver` dentro do painel do chat que:
+- Observa adições de `<textarea>` e `<input>` no DOM
+- Quando o número de campos visíveis muda, re-roda `detectFormFields()` automaticamente (debounced 600ms)
+- Atualiza a barra `.evo-chat-fields` sem precisar clicar em ↻
+- Também re-detecta em eventos de `scroll` da janela (debounced)
 
-### 2. Mensageria confiável entre content script e background
-- Adicionar **timeout de 90 s** no `chrome.runtime.sendMessage`: se passar disso, mostra "A geração demorou demais, tente novamente".
-- Tratar `chrome.runtime.lastError` (worker reciclado): nesse caso, refazer a chamada uma vez automaticamente.
-- No `background.js`, manter o worker vivo durante o fetch usando `chrome.alarms` curto + log explícito de erro de rede.
+### 3. Detecção mais permissiva (extension/content.js)
+Em `detectFormFields()`:
+- Incluir todos `<textarea>` visíveis e habilitados, sem filtro de largura
+- Para `<input type=text>`: só descartar se placeholder casar EXATAMENTE com "pesquisar/buscar/filtrar/selecione" E largura < 220px (manter regra atual)
+- Aumentar a profundidade de busca de label de 8 para 12 níveis
+- Como fallback final, usar o texto imediatamente anterior ao input no DOM (previousElementSibling chain) se nenhum label for encontrado
+- Mostrar contagem mais clara: "X campo(s) detectado(s) — role a página se faltar algum"
 
-### 3. Feedback visual
-- Substituir o estado "Gerando…" por uma barra com etapas: "Enviando observações → Consultando IA → Preenchendo campos".
-- Em caso de erro, mostrar a mensagem real (status HTTP, texto do servidor) dentro do chat, não só no console.
-- Botão **"Re-detectar campos"** no header do painel para rodar a varredura manualmente após você rolar a página.
+### 4. Botão "Detectar agora" mais visível
+A barra `.evo-chat-fields` ganha um link "↻ atualizar" inline para forçar re-scan rápido sem ter que mirar no botão pequeno do header.
 
-### 4. Endpoint do painel (`/api/public/extension/chat-generate`)
-- Adicionar `AbortController` com timeout de 60 s na chamada ao Lovable AI Gateway, devolvendo erro claro em vez de pendurar a request.
-- Logar no servidor (console) a quantidade de campos recebidos e o tempo da chamada para diagnosticar futuros casos de lentidão.
+### 5. Versão e empacotamento
+- Bump `manifest.json` → `0.2.5`
+- Reempacotar `public/agente-evolucao.zip`
 
-### Fora do escopo (não vou mexer agora)
-- Persistência do chat entre sessões.
-- Geração em background com polling (a stack overflow sugere isso, mas a chamada normal cabe bem em <60 s; só faria sentido se a IA estiver consistentemente passando do limite — me avisa se acontecer).
-- Mudar a UI da página de Configurações.
+## Detalhes técnicos
 
-## Como você vai testar depois
-1. Eu regero o `.zip` v0.2.1; baixe em **Configurações** e recarregue em `chrome://extensions`.
-2. Abra um atendimento e clique no botão flutuante. O painel deve listar **todos** os campos do modelo (não só "Texto").
-3. Se faltar algum campo, role o formulário até o fim e clique em **"Re-detectar campos"** — me mande print da lista para eu ajustar a heurística.
+```js
+// Novo pre-scroll
+async function preScrollEvolutionPanel() {
+  const scroller = document.scrollingElement || document.documentElement;
+  const max = scroller.scrollHeight;
+  const step = Math.max(300, window.innerHeight - 80);
+  for (let y = 0; y <= max; y += step) {
+    scroller.scrollTo({ top: y, behavior: "instant" });
+    await new Promise(r => setTimeout(r, 120));
+  }
+  // rola containers internos também
+  const inner = Array.from(document.querySelectorAll("div,main,section"))
+    .filter(d => isVisible(d) && d.scrollHeight > d.clientHeight + 100);
+  for (const c of inner) {
+    c.scrollTop = c.scrollHeight;
+    await new Promise(r => setTimeout(r, 80));
+    c.scrollTop = 0;
+  }
+  scroller.scrollTo({ top: 0, behavior: "instant" });
+  await new Promise(r => setTimeout(r, 150));
+}
+
+// Auto re-detecção dentro de openChat()
+const fieldObserver = new MutationObserver(() => {
+  clearTimeout(panel.__redetect);
+  panel.__redetect = setTimeout(() => {
+    const fresh = detectFormFields();
+    if (fresh.length !== chatState.fields.length) {
+      chatState.fields = fresh;
+      renderFieldsBar(panel);
+    }
+  }, 600);
+});
+fieldObserver.observe(document.body, { childList: true, subtree: true });
+window.addEventListener("scroll", debouncedRedetect, { passive: true });
+```
+
+## Arquivos alterados
+
+- `extension/content.js` — pre-scroll, auto re-detecção, filtro mais permissivo
+- `extension/manifest.json` — versão 0.2.5
+- `public/agente-evolucao.zip` — reempacotamento
+
+## Como testar
+
+1. Baixar o novo .zip em **Configurações** → recarregar em `chrome://extensions`
+2. Abrir o atendimento do paciente
+3. Abrir o chat (ícone da extensão) — sem rolar manualmente, ele deve listar os campos
+4. Se faltar algum, rolar a página: a contagem se atualiza sozinha
