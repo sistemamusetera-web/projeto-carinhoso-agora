@@ -9,8 +9,7 @@
     "https://*.lovable.app/*"
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "Agente de Evolução"
+    "default_title": "Agente de Evolução — abrir chat"
   },
   "background": { "service_worker": "background.js" },
   "content_scripts": [
