@@ -177,37 +177,42 @@
   }
 
   function detectFormFields() {
-    const inputs = Array.from(document.querySelectorAll("textarea, input[type='text'], input:not([type])")).filter(
-      (el) => isVisible(el) && !el.disabled && !el.readOnly && !isInsideChrome(el)
-    );
+    const roots = collectAllRoots();
+    const all = [];
+    for (const root of roots) {
+      try {
+        all.push(...root.querySelectorAll("textarea, input[type='text'], input:not([type]), [contenteditable='true']"));
+      } catch (e) { /* ignore */ }
+    }
+    const inputs = all.filter((el) => {
+      if (el.disabled || el.readOnly) return false;
+      if (isInsideChrome(el)) return false;
+      const r = el.getBoundingClientRect();
+      // aceita mesmo offscreen, desde que tenha tamanho
+      if (r.width < 4 || r.height < 4) return false;
+      return true;
+    });
     const fields = [];
     for (const el of inputs) {
       // ignora inputs pequenos com placeholder de busca
       if (el.tagName === "INPUT" && el.offsetWidth < 220 && IGNORE_PLACEHOLDER_RX.test(el.placeholder || "")) continue;
       let label = null;
-      // 1) <label for>
       if (el.id) {
-        const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        const lab = (el.ownerDocument || document).querySelector(`label[for="${CSS.escape(el.id)}"]`);
         if (lab) label = cleanLabel(lab.innerText);
       }
-      // 2) heurística do card
       if (!label || IGNORE_LABEL_RX.test(label)) {
         const cardLabel = findFieldCardLabel(el);
         if (cardLabel) label = cardLabel;
       }
-      // 3) aria-label
       if (!label && el.getAttribute("aria-label")) label = cleanLabel(el.getAttribute("aria-label"));
-      // 4) fallback: irmãos anteriores
       if (!label) label = findLabelFromSiblings(el);
-      // 5) placeholder, só se não for de busca
       if (!label && el.placeholder && !IGNORE_PLACEHOLDER_RX.test(el.placeholder)) label = cleanLabel(el.placeholder);
-      // 6) último recurso: textarea sem label vira "Campo N"
-      if (!label && el.tagName === "TEXTAREA") label = `Campo ${fields.length + 1}`;
+      if (!label && (el.tagName === "TEXTAREA" || el.getAttribute("contenteditable") === "true")) label = `Campo ${fields.length + 1}`;
       if (!label) continue;
       if (IGNORE_LABEL_RX.test(label)) continue;
       fields.push({ nome: label, el });
     }
-    // dedup mantendo primeiro
     const seen = new Set();
     return fields.filter((f) => {
       const k = normalize(f.nome);
