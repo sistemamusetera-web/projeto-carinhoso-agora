@@ -178,9 +178,21 @@
   }
 
   // ------------------- chat panel -------------------
+  function getConfig() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(["panelUrl", "apiKey"], (cfg) => resolve(cfg || {}));
+    });
+  }
+  function saveConfig(panelUrl, apiKey) {
+    return new Promise((resolve) => {
+      chrome.storage.local.set({ panelUrl, apiKey }, () => resolve());
+    });
+  }
+
   async function openChat() {
     if (document.querySelector(".evo-chat")) return;
     const paciente = detectPatientFromPage();
+    const cfg = await getConfig();
     chatState = {
       pacienteNome: paciente.nome,
       pacienteIdExterno: paciente.externalId,
