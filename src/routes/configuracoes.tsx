@@ -88,7 +88,20 @@ function ConfigPage() {
   const c = promptForm ?? cfg;
 
   function downloadExtensao() {
-    toast.info("A extensão Chrome está sendo preparada — em breve disponível para download.");
+    fetch("/agente-evolucao.zip")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Falha no download: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "agente-evolucao.zip";
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast.success("Download iniciado");
+      })
+      .catch((e) => toast.error(e.message));
   }
 
   return (
