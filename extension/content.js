@@ -186,8 +186,12 @@
       }
       // 3) aria-label
       if (!label && el.getAttribute("aria-label")) label = cleanLabel(el.getAttribute("aria-label"));
-      // 4) placeholder, só se não for de busca
+      // 4) fallback: irmãos anteriores
+      if (!label) label = findLabelFromSiblings(el);
+      // 5) placeholder, só se não for de busca
       if (!label && el.placeholder && !IGNORE_PLACEHOLDER_RX.test(el.placeholder)) label = cleanLabel(el.placeholder);
+      // 6) último recurso: textarea sem label vira "Campo N"
+      if (!label && el.tagName === "TEXTAREA") label = `Campo ${fields.length + 1}`;
       if (!label) continue;
       if (IGNORE_LABEL_RX.test(label)) continue;
       fields.push({ nome: label, el });
