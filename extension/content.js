@@ -723,6 +723,42 @@
   obs.observe(document.body, { childList: true, subtree: true });
   ensureFloatingButton();
 
+  // Auto-preencher assinatura mesmo sem abrir o chat.
+  // Busca dados do terapeuta uma vez e tenta preencher conforme o formulário aparece.
+  (async () => {
+    try {
+      const cached = await new Promise((res) =>
+        chrome.storage.local.get(["terapeuta"], (o) => res((o && o.terapeuta) || null))
+      );
+      const tryFill = (t) => {
+        if (!t || (!t.nome && !t.conselho && !t.especialidade)) return;
+        let tries = 0;
+        const tick = () => {
+          tries++;
+          const n = fillTherapistFields(t);
+          if (n > 0 || tries >= 30) return;
+          setTimeout(tick, 700);
+        };
+        tick();
+      };
+      if (cached) tryFill(cached);
+      sendBgMessage({ type: "fetch-therapist" }, 15000).then((r) => {
+        if (r?.ok && r.data?.terapeuta) {
+          try { chrome.storage.local.set({ terapeuta: r.data.terapeuta }); } catch (e) {}
+          tryFill(r.data.terapeuta);
+        }
+      }).catch(() => {});
+      // Re-tenta quando a SPA troca de tela
+      let lastUrl = location.href;
+      setInterval(() => {
+        if (location.href !== lastUrl) {
+          lastUrl = location.href;
+          chrome.storage.local.get(["terapeuta"], (o) => tryFill((o && o.terapeuta) || null));
+        }
+      }, 1000);
+    } catch (e) { /* ignore */ }
+  })();
+
   // Abre o chat quando o ícone da extensão é clicado
   try {
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -733,3 +769,4 @@
     });
   } catch (e) { /* ignore */ }
 })();
+
