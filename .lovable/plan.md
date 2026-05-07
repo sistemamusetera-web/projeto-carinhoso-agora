@@ -1,67 +1,36 @@
 ## Objetivo
+Renomear o bloco de configuração para "Assinatura do terapeuta responsável pela evolução" e garantir que esses dados preencham automaticamente o campo Assinatura da evolução na extensão.
 
-Antes de cada chat de evolução, mostrar um cartão "Assinatura do terapeuta" já preenchido com os dados salvos em Configurações + a data de hoje. A extensão preenche automaticamente:
-
-- Campos separados (Nome, Conselho/CPF, Especialidade, Data) quando existirem no formulário
-- E também um campo único "Assinatura" consolidado, se existir
+## O que já existe
+- Tabela `prompt_config` com `terapeuta_nome`, `terapeuta_conselho`, `terapeuta_especialidade`.
+- Card em `/configuracoes` ("Dados do terapeuta") com Nome, Conselho/CPF e Especialidade.
+- Endpoint `chat-generate` já devolve `terapeuta` + `dataAtual`.
+- `extension/content.js` (v0.2.8) já preenche campos separados (terapeuta/conselho/especialidade/data) e tenta preencher um textarea/contenteditable de "assinatura".
 
 ## Mudanças
 
-### 1. UI do chat (extensão — `extension/content.js` / popup do chat)
-Acima da área do chat, adicionar um bloco fixo "Assinatura":
-```
-👤 Nome do terapeuta
-🪪 CRP 06/12345
-🎯 Psicologia Clínica
-📅 07/05/2026  (hoje, automático)
-```
-- Dados vêm de `chrome.storage` (cacheados da última resposta de `chat-generate`, que já retorna `terapeuta`).
-- Botão pequeno "editar" → abre `/configuracoes` em nova aba.
-- Data sempre recalculada como `new Date()` no momento do preenchimento.
+### 1. `src/routes/configuracoes.tsx`
+- Renomear o card de **"Dados do terapeuta"** para **"Assinatura do terapeuta responsável pela evolução"**.
+- Atualizar o texto de apoio: "Esses dados são inseridos automaticamente no campo Assinatura de cada evolução gerada. A data é preenchida com a data de hoje."
 
-### 2. Preenchimento no formulário (`extension/content.js`)
+### 2. `extension/content.js`
+- Reforçar a detecção do campo Assinatura no Clínica nas Nuvens:
+  - Procurar `label`/`placeholder`/`name`/`id` contendo `assinatura|assinar|signature|rodapé|rodape`.
+  - Suportar `<textarea>`, `<input type="text">` e `[contenteditable]`.
+  - Formato padrão preenchido:
+    ```
+    {Nome}
+    {Conselho/CPF}
+    {Especialidade}
+    Data: {DD/MM/AAAA}
+    ```
+  - Só sobrescreve se estiver vazio (mantém comportamento atual).
+- Garantir que o bloco "Assinatura do terapeuta" exibido acima do chat use o mesmo título do painel para consistência ("Assinatura do terapeuta responsável pela evolução"), com link "editar" → `/configuracoes`.
+- Bump `manifest.json` → `0.2.9` e regerar `public/agente-evolucao.zip`.
 
-Estender `fillTherapistFields()`:
+## Fora de escopo
+- Múltiplos terapeutas (decisão anterior: apenas um).
+- Mudança de schema (campos já existem).
 
-**a) Campos separados** (já existe parcialmente):
-- Nome → regex `terapeuta|profissional|responsável|assinatura.*nome`
-- Conselho/CPF → `crp|crm|cro|cpf|conselho|registro`
-- Especialidade → `especialidade|área|formação`
-- Data → `data|dt[_ ]?sess|sessão.*data|assinatura.*data`
-
-**b) Detecção automática de formato de data:**
-- Ler `placeholder`, `pattern`, `maxlength`, `aria-label` ou valor atual
-- Reconhecer: `DD/MM/AAAA`, `DD-MM-AAAA`, `AAAA-MM-DD`, `MM/DD/AAAA`
-- Se `<input type="date">` → usar `YYYY-MM-DD`
-- Fallback: `DD/MM/AAAA` (pt-BR)
-
-**c) Campo "Assinatura" consolidado:**
-- Detectar `textarea`/`contenteditable` cujo label/placeholder contenha `assinatura|rodapé|assinatura digital`
-- Preencher com:
-  ```
-  {Nome}
-  {Conselho}
-  {Especialidade}
-  {DataFormatada}
-  ```
-- Não sobrescrever se o campo já tiver conteúdo do usuário (apenas se vazio).
-
-### 3. `chat-generate` (backend)
-Já retorna `terapeuta`. Adicionar `dataAtual: new Date().toISOString()` na resposta para coerência (o cliente pode usar a sua própria data; mantemos a do servidor como referência).
-
-### 4. Configurações (`/configuracoes`)
-Sem mudança estrutural — os 3 campos do "Dados do terapeuta" já existem. Adicionar apenas um aviso curto no topo do card:
-> "Estes dados são usados como assinatura em toda evolução gerada. A data da sessão é preenchida automaticamente com a data de hoje."
-
-### 5. Versão
-- `manifest.json` → `0.2.8`
-- Reempacotar `public/agente-evolucao.zip`
-
-## Arquivos afetados
-- `extension/content.js` (assinatura + detecção de data + campo consolidado + bloco visual no chat)
-- `extension/manifest.json` (version bump)
-- `public/agente-evolucao.zip` (repack)
-- `src/routes/api/public/extension/chat-generate.ts` (incluir `dataAtual`)
-- `src/routes/configuracoes.tsx` (texto de ajuda)
-
-Sem migration de banco — os campos já existem em `prompt_config`.
+## Entrega
+Após aprovação: usuário baixa o novo `.zip (v0.2.9)` em **Configurações** e recarrega em `chrome://extensions`.
