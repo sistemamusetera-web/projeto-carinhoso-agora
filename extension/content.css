@@ -29,29 +29,45 @@
 /* ----- Chat panel ----- */
 .evo-chat {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 400px;
+  top: 80px;
+  right: 20px;
+  width: 380px;
   max-width: 95vw;
+  height: 600px;
+  max-height: calc(100vh - 100px);
   background: #ffffff;
-  border-left: 1px solid #d1d5db;
-  box-shadow: -8px 0 24px rgba(0,0,0,0.12);
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
   z-index: 999999;
   display: flex;
   flex-direction: column;
   font-family: -apple-system, system-ui, sans-serif;
   font-size: 13px;
   color: #1f2937;
+  overflow: hidden;
+  resize: both;
+  min-width: 320px;
+  min-height: 360px;
 }
+.evo-chat.evo-chat-min {
+  height: auto !important;
+  min-height: 0;
+  resize: none;
+}
+.evo-chat.evo-chat-min > *:not(.evo-chat-header) { display: none !important; }
 .evo-chat-header {
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: #4b6b4f;
   color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: move;
+  user-select: none;
+  border-radius: 10px 10px 0 0;
 }
+.evo-chat.evo-chat-min .evo-chat-header { border-radius: 10px; }
 .evo-chat-header strong { font-size: 14px; display: block; }
 .evo-chat-header small { opacity: 0.85; font-size: 11px; }
 .evo-chat-close {
