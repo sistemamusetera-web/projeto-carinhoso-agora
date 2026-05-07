@@ -219,6 +219,15 @@
           <button class="evo-chat-close" title="Fechar">×</button>
         </div>
       </div>
+      <div class="evo-chat-config" style="padding:10px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;font-weight:600;color:#374151">Conexão</span>
+          <span class="evo-chat-conn-status" style="font-size:11px"></span>
+        </div>
+        <input class="evo-chat-url" placeholder="URL do painel (https://...)" value="${escapeHtml(cfg.panelUrl || "")}" style="width:100%;box-sizing:border-box;padding:5px 7px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" />
+        <input class="evo-chat-key" type="password" placeholder="API Key (evo_...)" value="${escapeHtml(cfg.apiKey || "")}" style="width:100%;box-sizing:border-box;padding:5px 7px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" />
+        <button class="evo-chat-save-cfg" style="padding:5px;border:0;border-radius:4px;background:#374151;color:white;font-size:11px;font-weight:600;cursor:pointer">Salvar conexão</button>
+      </div>
       <div class="evo-chat-fields">Detectando campos…</div>
       <div class="evo-chat-status" style="display:none"></div>
       <div class="evo-chat-msgs"></div>
@@ -231,6 +240,25 @@
       </div>
     `;
     document.body.appendChild(panel);
+
+    const connStatus = panel.querySelector(".evo-chat-conn-status");
+    const updateConnStatus = (cfg) => {
+      if (cfg.panelUrl && cfg.apiKey) {
+        connStatus.textContent = "✓ conectado";
+        connStatus.style.color = "#16a34a";
+      } else {
+        connStatus.textContent = "⚠ não configurado";
+        connStatus.style.color = "#dc2626";
+      }
+    };
+    updateConnStatus(cfg);
+    panel.querySelector(".evo-chat-save-cfg").onclick = async () => {
+      const url = panel.querySelector(".evo-chat-url").value.trim().replace(/\/$/, "");
+      const key = panel.querySelector(".evo-chat-key").value.trim();
+      if (!url || !key) { connStatus.textContent = "preencha URL e key"; connStatus.style.color = "#dc2626"; return; }
+      await saveConfig(url, key);
+      updateConnStatus({ panelUrl: url, apiKey: key });
+    };
 
     panel.querySelector(".evo-chat-close").onclick = () => panel.remove();
     panel.querySelector(".evo-chat-redetect").onclick = () => runDetection(panel);
