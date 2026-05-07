@@ -253,6 +253,7 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
               conselho: cfg?.terapeuta_conselho ?? "",
               especialidade: cfg?.terapeuta_especialidade ?? "",
             },
+            dataAtual: new Date().toISOString(),
           });
         } catch (e) {
           console.error(e);
