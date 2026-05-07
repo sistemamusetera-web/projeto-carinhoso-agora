@@ -723,8 +723,19 @@
   obs.observe(document.body, { childList: true, subtree: true });
   ensureFloatingButton();
 
-  // Auto-preencher assinatura mesmo sem abrir o chat.
-  // Busca dados do terapeuta uma vez e tenta preencher conforme o formulário aparece.
+  // Auto-preencher assinatura mesmo sem abrir o chat + abrir o painel automaticamente
+  // (uma vez por carregamento) para que o cartão "Assinatura" fique visível.
+  let __evoAutoOpened = false;
+  function autoOpenPanelOnce() {
+    if (__evoAutoOpened) return;
+    if (document.querySelector(".evo-chat")) { __evoAutoOpened = true; return; }
+    // só abre se houver formulário de evolução detectado
+    const fields = (function () { try { return detectFormFields(); } catch { return []; } })();
+    if (!fields || fields.length < 2) return;
+    __evoAutoOpened = true;
+    try { openChat(); } catch (e) { /* ignore */ }
+  }
+
   (async () => {
     try {
       const cached = await new Promise((res) =>
@@ -736,6 +747,7 @@
         const tick = () => {
           tries++;
           const n = fillTherapistFields(t);
+          autoOpenPanelOnce();
           if (n > 0 || tries >= 30) return;
           setTimeout(tick, 700);
         };
@@ -746,6 +758,8 @@
         if (r?.ok && r.data?.terapeuta) {
           try { chrome.storage.local.set({ terapeuta: r.data.terapeuta }); } catch (e) {}
           tryFill(r.data.terapeuta);
+          // Atualiza o cartão se o painel já estiver aberto
+          try { if (chatState && typeof chatState.renderSig === "function") { chatState.terapeuta = r.data.terapeuta; chatState.renderSig(r.data.terapeuta); } } catch (e) {}
         }
       }).catch(() => {});
       // Re-tenta quando a SPA troca de tela
@@ -753,6 +767,7 @@
       setInterval(() => {
         if (location.href !== lastUrl) {
           lastUrl = location.href;
+          __evoAutoOpened = false;
           chrome.storage.local.get(["terapeuta"], (o) => tryFill((o && o.terapeuta) || null));
         }
       }, 1000);
