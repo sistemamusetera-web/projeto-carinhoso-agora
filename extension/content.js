@@ -433,4 +433,14 @@
   });
   obs.observe(document.body, { childList: true, subtree: true });
   ensureFloatingButton();
+
+  // Abre o chat quando o ícone da extensão é clicado
+  try {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (msg?.type === "open-chat") {
+        openChat();
+        sendResponse({ ok: true });
+      }
+    });
+  } catch (e) { /* ignore */ }
 })();
