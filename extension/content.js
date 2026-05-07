@@ -622,6 +622,23 @@
     } catch (e) { return false; }
   }
 
+  // Auto-preenche os campos de assinatura assim que o formulário aparecer.
+  // Tenta por ~10s caso os campos ainda não estejam renderizados.
+  function autoFillTherapistWhenReady(panel) {
+    const t = chatState?.terapeuta;
+    if (!t || (!t.nome && !t.conselho && !t.especialidade)) return;
+    let tries = 0;
+    const maxTries = 20; // ~10s
+    const tick = () => {
+      tries++;
+      if (!document.body.contains(panel)) return;
+      const n = fillTherapistFields(t);
+      if (n > 0 || tries >= maxTries) return;
+      setTimeout(tick, 500);
+    };
+    tick();
+  }
+
   function fillTherapistFields(t) {
     if (!t) t = {};
     // cache para o cartão de assinatura
