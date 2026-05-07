@@ -228,6 +228,73 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
             return json({ error: "IA não retornou campos preenchidos" }, 500);
           }
 
+          // Detecta campos vazios/curtos e tenta UM retry para completar
+          const isEmpty = (v: any) => {
+            const s = (v ?? "").toString().trim();
+            if (s.length < 40) return true;
+            if (/^(-+|n\/?a|sem\s+(informa|intercorr))/i.test(s)) return true;
+            return false;
+          };
+          const faltantes = campos.filter((c) => isEmpty(camposOut[c]));
+          if (faltantes.length) {
+            console.log(`[chat-generate] retry para ${faltantes.length} campo(s) vazio(s): ${faltantes.join(", ")}`);
+            const retryProps: Record<string, any> = {};
+            for (const c of faltantes) {
+              retryProps[c] = {
+                type: "string",
+                minLength: 40,
+                description: `Texto clínico OBRIGATÓRIO para "${c}". Mínimo 3 frases. NUNCA vazio.`,
+              };
+            }
+            const retryTools = [{
+              type: "function",
+              function: {
+                name: "completar_campos",
+                description: "Completa apenas os campos que ficaram vazios.",
+                parameters: { type: "object", properties: retryProps, required: faltantes, additionalProperties: false },
+              },
+            }];
+            const jaPreenchido = Object.entries(camposOut)
+              .filter(([k]) => !faltantes.includes(k))
+              .map(([k, v]) => `[${k}]\n${v}`).join("\n\n");
+            const retryMsgs = [
+              { role: "system", content: sys },
+              ...mensagens.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content })),
+              {
+                role: "user",
+                content: `Os seguintes campos ficaram vazios ou curtos demais e PRECISAM ser preenchidos agora, mantendo total coerência com o que já foi gerado:\n\nCAMPOS JÁ PREENCHIDOS:\n${jaPreenchido || "(nenhum)"}\n\nCAMPOS A COMPLETAR (mínimo 3 frases cada, nunca vazio): ${faltantes.join(", ")}`,
+              },
+            ];
+            try {
+              const r2 = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  model: modelo,
+                  messages: retryMsgs,
+                  tools: retryTools,
+                  tool_choice: { type: "function", function: { name: "completar_campos" } },
+                  temperature: 0.7,
+                  max_tokens: 4000,
+                }),
+              });
+              if (r2.ok) {
+                const d2 = await r2.json();
+                const tc2 = d2.choices?.[0]?.message?.tool_calls?.[0];
+                if (tc2?.function?.arguments) {
+                  try {
+                    const extra = JSON.parse(tc2.function.arguments);
+                    for (const c of faltantes) {
+                      if (extra[c] && !isEmpty(extra[c])) camposOut[c] = extra[c];
+                    }
+                  } catch { /* ignore */ }
+                }
+              }
+            } catch (e) {
+              console.error("[chat-generate] retry falhou", e);
+            }
+          }
+
           const consolidado = Object.entries(camposOut)
             .map(([k, v]) => `## ${k}\n${v}`)
             .join("\n\n");
