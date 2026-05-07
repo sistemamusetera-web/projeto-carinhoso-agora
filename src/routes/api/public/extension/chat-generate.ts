@@ -111,17 +111,18 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
 
           const sys = `${baseSys}
 
-MODO EXPANSÃO INTELIGENTE:
+MODO PREENCHIMENTO OBRIGATÓRIO:
 - O terapeuta normalmente envia notas curtas, telegráficas ou tópicos rápidos.
 - Sua tarefa é EXPANDIR essas notas em texto clínico profissional, rico e bem desenvolvido para CADA campo do formulário.
 - Use o perfil, objetivos e histórico do paciente para inferir desdobramentos plausíveis e coerentes (linguagem, postura terapêutica, recursos típicos da abordagem).
 - NUNCA invente fatos clínicos novos que mudem a história do paciente: nada de novos diagnósticos, medicações, eventos familiares, datas ou pessoas que não foram mencionadas.
-- Para CADA campo do formulário, sempre produza conteúdo substantivo (3 a 8 frases, conforme o campo). Só use uma observação neutra do tipo "Sem intercorrências relevantes nesta sessão." quando realmente não houver nenhuma base para inferir.
+- É ABSOLUTAMENTE PROIBIDO retornar qualquer campo vazio, com "-", "N/A", "sem informações", "sem intercorrências" ou frases genéricas curtas. TODO campo deve ter no MÍNIMO 3 frases completas (cerca de 40 palavras), redigidas em texto clínico profissional.
+- Mesmo quando a nota do terapeuta for muito curta ou ausente, você DEVE inferir conteúdo plausível para todos os campos a partir do perfil, objetivos terapêuticos, histórico recente e abordagem usual — sem inventar fatos novos.
 - Mantenha coerência cruzada: descrição da sessão ↔ recursos ↔ comportamento ↔ respostas ↔ plano ↔ próximos objetivos devem contar a MESMA história.
 - Evite repetir literalmente trechos do histórico; reescreva.
 - Estilo: ${estilo}.
 - Você DEVE responder usando a função "preencher_evolucao" com EXATAMENTE estas chaves: ${campos.map((c) => JSON.stringify(c)).join(", ")}.
-- Cada valor deve ser um texto clínico profissional, direto, sem títulos repetindo o nome do campo.
+- Cada valor deve ser um texto clínico profissional, direto, sem títulos repetindo o nome do campo, e NUNCA vazio.
 
 CONTEXTO DO PACIENTE:
 Nome: ${paciente.nome}
@@ -133,7 +134,11 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
 
           const properties: Record<string, any> = {};
           for (const c of campos) {
-            properties[c] = { type: "string", description: `Conteúdo clínico para o campo "${c}"` };
+            properties[c] = {
+              type: "string",
+              minLength: 40,
+              description: `Texto clínico OBRIGATÓRIO para "${c}". Mínimo 3 frases (~40 palavras). NUNCA vazio, NUNCA "-", "N/A" ou frase genérica.`,
+            };
           }
 
           const tools = [
@@ -182,7 +187,7 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
                 tools,
                 tool_choice: { type: "function", function: { name: "preencher_evolucao" } },
                 temperature: 0.6,
-                max_tokens: 4000,
+                max_tokens: 6000,
               }),
               signal: ctrl.signal,
             });
@@ -221,6 +226,73 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
 
           if (!Object.keys(camposOut).length) {
             return json({ error: "IA não retornou campos preenchidos" }, 500);
+          }
+
+          // Detecta campos vazios/curtos e tenta UM retry para completar
+          const isEmpty = (v: any) => {
+            const s = (v ?? "").toString().trim();
+            if (s.length < 40) return true;
+            if (/^(-+|n\/?a|sem\s+(informa|intercorr))/i.test(s)) return true;
+            return false;
+          };
+          const faltantes = campos.filter((c) => isEmpty(camposOut[c]));
+          if (faltantes.length) {
+            console.log(`[chat-generate] retry para ${faltantes.length} campo(s) vazio(s): ${faltantes.join(", ")}`);
+            const retryProps: Record<string, any> = {};
+            for (const c of faltantes) {
+              retryProps[c] = {
+                type: "string",
+                minLength: 40,
+                description: `Texto clínico OBRIGATÓRIO para "${c}". Mínimo 3 frases. NUNCA vazio.`,
+              };
+            }
+            const retryTools = [{
+              type: "function",
+              function: {
+                name: "completar_campos",
+                description: "Completa apenas os campos que ficaram vazios.",
+                parameters: { type: "object", properties: retryProps, required: faltantes, additionalProperties: false },
+              },
+            }];
+            const jaPreenchido = Object.entries(camposOut)
+              .filter(([k]) => !faltantes.includes(k))
+              .map(([k, v]) => `[${k}]\n${v}`).join("\n\n");
+            const retryMsgs = [
+              { role: "system", content: sys },
+              ...mensagens.map((m) => ({ role: m.role === "user" ? "user" : "assistant", content: m.content })),
+              {
+                role: "user",
+                content: `Os seguintes campos ficaram vazios ou curtos demais e PRECISAM ser preenchidos agora, mantendo total coerência com o que já foi gerado:\n\nCAMPOS JÁ PREENCHIDOS:\n${jaPreenchido || "(nenhum)"}\n\nCAMPOS A COMPLETAR (mínimo 3 frases cada, nunca vazio): ${faltantes.join(", ")}`,
+              },
+            ];
+            try {
+              const r2 = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  model: modelo,
+                  messages: retryMsgs,
+                  tools: retryTools,
+                  tool_choice: { type: "function", function: { name: "completar_campos" } },
+                  temperature: 0.7,
+                  max_tokens: 4000,
+                }),
+              });
+              if (r2.ok) {
+                const d2 = await r2.json();
+                const tc2 = d2.choices?.[0]?.message?.tool_calls?.[0];
+                if (tc2?.function?.arguments) {
+                  try {
+                    const extra = JSON.parse(tc2.function.arguments);
+                    for (const c of faltantes) {
+                      if (extra[c] && !isEmpty(extra[c])) camposOut[c] = extra[c];
+                    }
+                  } catch { /* ignore */ }
+                }
+              }
+            } catch (e) {
+              console.error("[chat-generate] retry falhou", e);
+            }
           }
 
           const consolidado = Object.entries(camposOut)
