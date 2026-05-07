@@ -554,7 +554,15 @@
     const filledTher = fillTherapistFields(terapeuta);
     if (chatState.renderSig) chatState.renderSig(terapeuta);
     const filled = fillFields(camposResp);
-    const therMsg = filledTher ? ` (+${filledTher} dado(s) do terapeuta)` : "";
+    // Fallback: se nada do terapeuta foi colocado em um campo dedicado,
+    // anexa o bloco de assinatura ao final do último campo de evolução preenchido.
+    let appendedSig = false;
+    if (!filledTher && (terapeuta.nome || terapeuta.conselho || terapeuta.especialidade)) {
+      appendedSig = appendSignatureToLastField(camposResp, terapeuta);
+    }
+    const therMsg = filledTher
+      ? ` (+${filledTher} dado(s) do terapeuta)`
+      : appendedSig ? " (assinatura anexada ao final)" : "";
     chatState.messages.push({
       role: "assistant",
       content:
@@ -563,6 +571,42 @@
         `\n\nRevise antes de finalizar. Para ajustar, descreva o que mudar e clique novamente.`,
     });
     renderMsgs(panel);
+  }
+
+  function buildSignatureBlock(t) {
+    const dataBR = formatDateBR();
+    const lines = [
+      "",
+      "—",
+      t.nome ? t.nome : "",
+      t.conselho ? t.conselho : "",
+      t.especialidade ? t.especialidade : "",
+      `Data: ${dataBR}`,
+    ].filter((l) => l !== "");
+    return lines.join("\n");
+  }
+
+  function appendSignatureToLastField(camposResp, t) {
+    const keys = Object.keys(camposResp);
+    if (!keys.length) return false;
+    // procura o último campo (na ordem do formulário) que casa com a resposta
+    let target = null;
+    for (let i = chatState.fields.length - 1; i >= 0; i--) {
+      const f = chatState.fields[i];
+      const key = normalize(f.nome);
+      const match = keys.find((k) => {
+        const nk = normalize(k);
+        return nk === key || nk.includes(key) || key.includes(nk);
+      });
+      if (match) { target = f; break; }
+    }
+    if (!target) return false;
+    try {
+      const cur = (target.el.value ?? target.el.innerText ?? "").toString();
+      if (/—\s*\n/.test(cur) && (t.nome ? cur.includes(t.nome) : false)) return false;
+      setNativeValue(target.el, cur + buildSignatureBlock(t));
+      return true;
+    } catch (e) { return false; }
   }
 
   function fillTherapistFields(t) {
