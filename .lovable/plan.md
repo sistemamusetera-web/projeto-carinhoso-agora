@@ -1,51 +1,67 @@
 ## Objetivo
 
-Tornar o agente mais "inteligente" (preenche todos os campos a partir de poucas informações) e adicionar dados do terapeuta que são preenchidos automaticamente em todo formulário.
+Antes de cada chat de evolução, mostrar um cartão "Assinatura do terapeuta" já preenchido com os dados salvos em Configurações + a data de hoje. A extensão preenche automaticamente:
 
-## 1. Dados do terapeuta (nova configuração)
+- Campos separados (Nome, Conselho/CPF, Especialidade, Data) quando existirem no formulário
+- E também um campo único "Assinatura" consolidado, se existir
 
-**Banco** — adicionar colunas em `prompt_config`:
-- `terapeuta_nome` (text, default '')
-- `terapeuta_conselho` (text, default '') — ex.: "CRP 06/12345"
-- `terapeuta_especialidade` (text, default '')
-- `terapeuta_extras` (jsonb, default '{}') — pares chave/valor livres (ex.: telefone, e-mail) para mapear em qualquer campo extra que apareça no formulário
+## Mudanças
 
-**Tela `/configuracoes`** — novo card "Dados do terapeuta" acima de "Prompt e modelo", com inputs para nome, conselho/CPF e especialidade, salvando no mesmo `prompt_config` (mesmo botão Salvar).
+### 1. UI do chat (extensão — `extension/content.js` / popup do chat)
+Acima da área do chat, adicionar um bloco fixo "Assinatura":
+```
+👤 Nome do terapeuta
+🪪 CRP 06/12345
+🎯 Psicologia Clínica
+📅 07/05/2026  (hoje, automático)
+```
+- Dados vêm de `chrome.storage` (cacheados da última resposta de `chat-generate`, que já retorna `terapeuta`).
+- Botão pequeno "editar" → abre `/configuracoes` em nova aba.
+- Data sempre recalculada como `new Date()` no momento do preenchimento.
 
-## 2. Preenchimento automático dos dados do terapeuta
+### 2. Preenchimento no formulário (`extension/content.js`)
 
-O endpoint `chat-generate` passa a retornar, junto dos `campos` gerados pela IA, um objeto `terapeuta` com os dados salvos na config.
+Estender `fillTherapistFields()`:
 
-A extensão (`content.js`), ao receber a resposta, antes de aplicar os textos da IA:
-- Detecta campos do terapeuta no formulário por heurística de label (regex em PT-BR):
-  - nome → "terapeuta", "profissional", "responsável"
-  - conselho → "conselho", "crp", "crm", "cpf", "registro"
-  - especialidade → "especialidade", "área"
-- Para cada match, faz `setNativeValue` com o valor da config (sem chamar a IA).
-- Em seguida aplica normalmente os campos clínicos vindos da IA aos demais textareas.
+**a) Campos separados** (já existe parcialmente):
+- Nome → regex `terapeuta|profissional|responsável|assinatura.*nome`
+- Conselho/CPF → `crp|crm|cro|cpf|conselho|registro`
+- Especialidade → `especialidade|área|formação`
+- Data → `data|dt[_ ]?sess|sessão.*data|assinatura.*data`
 
-Assim, todo `Gerar e preencher` deixa os dados do terapeuta prontos.
+**b) Detecção automática de formato de data:**
+- Ler `placeholder`, `pattern`, `maxlength`, `aria-label` ou valor atual
+- Reconhecer: `DD/MM/AAAA`, `DD-MM-AAAA`, `AAAA-MM-DD`, `MM/DD/AAAA`
+- Se `<input type="date">` → usar `YYYY-MM-DD`
+- Fallback: `DD/MM/AAAA` (pt-BR)
 
-## 3. IA mais "inteligente" com pouca entrada
+**c) Campo "Assinatura" consolidado:**
+- Detectar `textarea`/`contenteditable` cujo label/placeholder contenha `assinatura|rodapé|assinatura digital`
+- Preencher com:
+  ```
+  {Nome}
+  {Conselho}
+  {Especialidade}
+  {DataFormatada}
+  ```
+- Não sobrescrever se o campo já tiver conteúdo do usuário (apenas se vazio).
 
-No `chat-generate` (server route), reforçar o `system prompt` para o modo "expansão inteligente":
+### 3. `chat-generate` (backend)
+Já retorna `terapeuta`. Adicionar `dataAtual: new Date().toISOString()` na resposta para coerência (o cliente pode usar a sua própria data; mantemos a do servidor como referência).
 
-- Instruir explicitamente: "A partir de notas curtas/telegráficas do terapeuta, EXPANDA com linguagem clínica profissional, inferindo desdobramentos plausíveis e coerentes com o perfil/objetivos/histórico do paciente — sem inventar fatos clínicos novos (diagnósticos, medicações, eventos não citados)."
-- Para cada campo do formulário, sempre produzir conteúdo substantivo (nunca "Sem registros…") quando houver qualquer informação aproveitável; só usar placeholder neutro se realmente não houver base.
-- Manter coerência cruzada entre os campos (descrição ↔ recursos ↔ comportamento ↔ próximos objetivos).
-- Subir o `max_tokens` da chamada e usar `temperature: 0.6` para texto mais rico, mas previsível.
-- Trocar o modelo padrão (quando o usuário não definiu) para `google/gemini-2.5-pro` (mais detalhe), mantendo override pela config.
+### 4. Configurações (`/configuracoes`)
+Sem mudança estrutural — os 3 campos do "Dados do terapeuta" já existem. Adicionar apenas um aviso curto no topo do card:
+> "Estes dados são usados como assinatura em toda evolução gerada. A data da sessão é preenchida automaticamente com a data de hoje."
 
-A chamada continua usando tool-calling para garantir o JSON com as chaves exatas dos campos detectados — nada muda no contrato com a extensão.
-
-## 4. Versão da extensão
-
-`extension/manifest.json` → `0.2.7` e re-empacotar `public/agente-evolucao.zip`.
+### 5. Versão
+- `manifest.json` → `0.2.8`
+- Reempacotar `public/agente-evolucao.zip`
 
 ## Arquivos afetados
+- `extension/content.js` (assinatura + detecção de data + campo consolidado + bloco visual no chat)
+- `extension/manifest.json` (version bump)
+- `public/agente-evolucao.zip` (repack)
+- `src/routes/api/public/extension/chat-generate.ts` (incluir `dataAtual`)
+- `src/routes/configuracoes.tsx` (texto de ajuda)
 
-- migration SQL: novas colunas em `prompt_config`
-- `src/routes/configuracoes.tsx` — card "Dados do terapeuta" + estado/save
-- `src/routes/api/public/extension/chat-generate.ts` — system prompt + retorno `terapeuta`
-- `extension/content.js` — preenchimento dos campos do terapeuta
-- `extension/manifest.json` + `public/agente-evolucao.zip`
+Sem migration de banco — os campos já existem em `prompt_config`.
