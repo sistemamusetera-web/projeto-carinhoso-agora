@@ -64,19 +64,29 @@
   }
 
   async function preScrollEvolutionPanel() {
-    // Tenta achar o container scrollável que contém um label "Obrigatório" (típico do form)
-    const candidate = Array.from(document.querySelectorAll("div"))
-      .filter((d) => isVisible(d) && d.scrollHeight > d.clientHeight + 50)
-      .find((d) => /Obrigat[óo]rio/i.test(d.innerText || ""));
-    if (!candidate) return;
-    const original = candidate.scrollTop;
-    const max = candidate.scrollHeight;
-    for (let y = 0; y <= max; y += Math.max(200, candidate.clientHeight - 50)) {
-      candidate.scrollTop = y;
-      await new Promise((r) => setTimeout(r, 80));
+    // 1) Rola a janela inteira de cima ao fim e volta (força lazy-render)
+    const scroller = document.scrollingElement || document.documentElement;
+    const originalY = scroller.scrollTop;
+    const maxY = scroller.scrollHeight;
+    const stepY = Math.max(300, window.innerHeight - 80);
+    for (let y = 0; y <= maxY; y += stepY) {
+      scroller.scrollTop = y;
+      await new Promise((r) => setTimeout(r, 110));
     }
-    candidate.scrollTop = original;
-    await new Promise((r) => setTimeout(r, 120));
+    // 2) Também rola containers internos scrolláveis
+    const inner = Array.from(document.querySelectorAll("div, main, section, form"))
+      .filter((d) => isVisible(d) && d.scrollHeight > d.clientHeight + 80 && d !== scroller);
+    for (const c of inner.slice(0, 6)) {
+      const orig = c.scrollTop;
+      const max = c.scrollHeight;
+      for (let y = 0; y <= max; y += Math.max(200, c.clientHeight - 50)) {
+        c.scrollTop = y;
+        await new Promise((r) => setTimeout(r, 70));
+      }
+      c.scrollTop = orig;
+    }
+    scroller.scrollTop = originalY;
+    await new Promise((r) => setTimeout(r, 150));
   }
 
   function findFieldCardLabel(el) {
@@ -84,19 +94,34 @@
     // e contém um texto curto identificando o campo.
     let cur = el.parentElement;
     let best = null;
-    for (let depth = 0; depth < 8 && cur; depth++) {
+    for (let depth = 0; depth < 12 && cur; depth++) {
       const inputs = cur.querySelectorAll("input[type='text'], input:not([type]), textarea");
       if (inputs.length > 1) break; // saímos do escopo do campo
-      // textos diretos no card, antes do input
       const texts = collectLeadingTexts(cur, el);
       const label = pickBestLabel(texts);
       if (label) best = label;
-      if (best && cur.querySelector(":scope > label, :scope > div, :scope > span, :scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > h4")) {
-        return best;
-      }
+      if (best) return best;
       cur = cur.parentElement;
     }
     return best;
+  }
+
+  function findLabelFromSiblings(el) {
+    // Fallback: caminha pelos previousElementSiblings e ancestrais procurando texto curto
+    let cur = el;
+    for (let d = 0; d < 6 && cur; d++) {
+      let sib = cur.previousElementSibling;
+      while (sib) {
+        const t = (sib.innerText || sib.textContent || "").trim().split("\n")[0].trim();
+        const cleaned = cleanLabel(t);
+        if (cleaned && cleaned.length <= 80 && !IGNORE_LABEL_RX.test(cleaned) && !/^[\d\s\-\/.:]+$/.test(cleaned)) {
+          return cleaned;
+        }
+        sib = sib.previousElementSibling;
+      }
+      cur = cur.parentElement;
+    }
+    return null;
   }
 
   function collectLeadingTexts(container, inputEl) {
@@ -161,8 +186,12 @@
       }
       // 3) aria-label
       if (!label && el.getAttribute("aria-label")) label = cleanLabel(el.getAttribute("aria-label"));
-      // 4) placeholder, só se não for de busca
+      // 4) fallback: irmãos anteriores
+      if (!label) label = findLabelFromSiblings(el);
+      // 5) placeholder, só se não for de busca
       if (!label && el.placeholder && !IGNORE_PLACEHOLDER_RX.test(el.placeholder)) label = cleanLabel(el.placeholder);
+      // 6) último recurso: textarea sem label vira "Campo N"
+      if (!label && el.tagName === "TEXTAREA") label = `Campo ${fields.length + 1}`;
       if (!label) continue;
       if (IGNORE_LABEL_RX.test(label)) continue;
       fields.push({ nome: label, el });
@@ -284,19 +313,66 @@
 
     renderMsgs(panel);
     await runDetection(panel);
+    setupAutoRedetect(panel);
+  }
+
+  function renderFieldsBar(panel) {
+    const fieldsBox = panel.querySelector(".evo-chat-fields");
+    const fields = chatState.fields;
+    if (!fields.length) {
+      fieldsBox.innerHTML = `<b>Nenhum campo detectado.</b> Role a página do atendimento ou clique <a href="#" class="evo-redetect-link" style="color:#4b6b4f;text-decoration:underline">aqui para re-detectar</a>.`;
+    } else {
+      fieldsBox.innerHTML = `<b>${fields.length} campo(s):</b> ${fields.map((f) => escapeHtml(f.nome)).join(" · ")} <a href="#" class="evo-redetect-link" style="color:#4b6b4f;text-decoration:underline;margin-left:6px">↻ atualizar</a>`;
+    }
+    const link = fieldsBox.querySelector(".evo-redetect-link");
+    if (link) link.onclick = (e) => { e.preventDefault(); runDetection(panel); };
   }
 
   async function runDetection(panel) {
     const fieldsBox = panel.querySelector(".evo-chat-fields");
     fieldsBox.innerHTML = "Rolando o formulário para carregar todos os campos…";
     await preScrollEvolutionPanel();
-    const fields = detectFormFields();
-    chatState.fields = fields;
-    if (!fields.length) {
-      fieldsBox.innerHTML = `<b>Nenhum campo detectado.</b> Abra um atendimento com o modelo de evolução, role o formulário e clique em ↻.`;
-    } else {
-      fieldsBox.innerHTML = `<b>${fields.length} campo(s):</b> ${fields.map((f) => escapeHtml(f.nome)).join(" · ")}`;
-    }
+    chatState.fields = detectFormFields();
+    renderFieldsBar(panel);
+  }
+
+  function setupAutoRedetect(panel) {
+    let scheduled = null;
+    const schedule = () => {
+      if (scheduled) clearTimeout(scheduled);
+      scheduled = setTimeout(() => {
+        if (!document.body.contains(panel)) return;
+        const fresh = detectFormFields();
+        const sigOld = chatState.fields.map((f) => f.nome).join("|");
+        const sigNew = fresh.map((f) => f.nome).join("|");
+        if (sigOld !== sigNew) {
+          chatState.fields = fresh;
+          renderFieldsBar(panel);
+        }
+      }, 600);
+    };
+    const obs = new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const n of m.addedNodes) {
+          if (n.nodeType !== 1) continue;
+          if (n.matches?.("textarea, input") || n.querySelector?.("textarea, input")) {
+            schedule();
+            return;
+          }
+        }
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("scroll", schedule, { passive: true });
+    // limpa quando o painel for removido
+    const cleanup = new MutationObserver(() => {
+      if (!document.body.contains(panel)) {
+        obs.disconnect();
+        window.removeEventListener("scroll", schedule);
+        cleanup.disconnect();
+      }
+    });
+    cleanup.observe(document.body, { childList: true });
   }
 
   function renderMsgs(panel) {
