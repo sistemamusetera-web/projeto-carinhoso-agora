@@ -36,6 +36,31 @@
     return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
 
+  // ------------------- data -------------------
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function todayParts() {
+    const d = new Date();
+    return { d: pad2(d.getDate()), m: pad2(d.getMonth() + 1), y: String(d.getFullYear()) };
+  }
+  function formatDateForField(el) {
+    const { d, m, y } = todayParts();
+    if (el && el.tagName === "INPUT" && (el.type || "").toLowerCase() === "date") return `${y}-${m}-${d}`;
+    const hints = [
+      el?.getAttribute?.("placeholder"),
+      el?.getAttribute?.("pattern"),
+      el?.getAttribute?.("aria-label"),
+      el?.value,
+    ].filter(Boolean).join(" ").toLowerCase();
+    if (/aaaa[\/-]mm[\/-]dd|yyyy[\/-]mm[\/-]dd/.test(hints)) return `${y}-${m}-${d}`;
+    if (/mm[\/-]dd[\/-]aaaa|mm[\/-]dd[\/-]yyyy/.test(hints)) return `${m}/${d}/${y}`;
+    if (/dd-mm-aaaa|dd-mm-yyyy/.test(hints)) return `${d}-${m}-${y}`;
+    return `${d}/${m}/${y}`; // pt-BR default
+  }
+  function formatDateBR() {
+    const { d, m, y } = todayParts();
+    return `${d}/${m}/${y}`;
+  }
+
   // ------------------- paciente -------------------
   function detectPatientFromPage() {
     const headings = Array.from(document.querySelectorAll("h1, h2, h3, [class*='nome'], [class*='paciente']"));
