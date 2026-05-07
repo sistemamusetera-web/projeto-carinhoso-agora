@@ -248,6 +248,11 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
             evolucaoId: evo?.id,
             pacienteId: paciente.id,
             pacienteNome: paciente.nome,
+            terapeuta: {
+              nome: cfg?.terapeuta_nome ?? "",
+              conselho: cfg?.terapeuta_conselho ?? "",
+              especialidade: cfg?.terapeuta_especialidade ?? "",
+            },
           });
         } catch (e) {
           console.error(e);
