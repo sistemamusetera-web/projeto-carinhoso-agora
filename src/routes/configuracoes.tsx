@@ -57,6 +57,9 @@ function ConfigPage() {
         system_prompt: promptForm.system_prompt,
         modelo: promptForm.modelo,
         estilo_padrao: promptForm.estilo_padrao,
+        terapeuta_nome: promptForm.terapeuta_nome ?? "",
+        terapeuta_conselho: promptForm.terapeuta_conselho ?? "",
+        terapeuta_especialidade: promptForm.terapeuta_especialidade ?? "",
       }).eq("user_id", user!.id);
       if (error) throw error;
     },
