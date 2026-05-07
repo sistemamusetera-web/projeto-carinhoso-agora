@@ -41,7 +41,8 @@ function LoginPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        nav({ to: "/" });
+        await supabase.auth.getSession();
+        window.location.href = "/";
       }
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao autenticar");
