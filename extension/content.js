@@ -64,19 +64,29 @@
   }
 
   async function preScrollEvolutionPanel() {
-    // Tenta achar o container scrollável que contém um label "Obrigatório" (típico do form)
-    const candidate = Array.from(document.querySelectorAll("div"))
-      .filter((d) => isVisible(d) && d.scrollHeight > d.clientHeight + 50)
-      .find((d) => /Obrigat[óo]rio/i.test(d.innerText || ""));
-    if (!candidate) return;
-    const original = candidate.scrollTop;
-    const max = candidate.scrollHeight;
-    for (let y = 0; y <= max; y += Math.max(200, candidate.clientHeight - 50)) {
-      candidate.scrollTop = y;
-      await new Promise((r) => setTimeout(r, 80));
+    // 1) Rola a janela inteira de cima ao fim e volta (força lazy-render)
+    const scroller = document.scrollingElement || document.documentElement;
+    const originalY = scroller.scrollTop;
+    const maxY = scroller.scrollHeight;
+    const stepY = Math.max(300, window.innerHeight - 80);
+    for (let y = 0; y <= maxY; y += stepY) {
+      scroller.scrollTop = y;
+      await new Promise((r) => setTimeout(r, 110));
     }
-    candidate.scrollTop = original;
-    await new Promise((r) => setTimeout(r, 120));
+    // 2) Também rola containers internos scrolláveis
+    const inner = Array.from(document.querySelectorAll("div, main, section, form"))
+      .filter((d) => isVisible(d) && d.scrollHeight > d.clientHeight + 80 && d !== scroller);
+    for (const c of inner.slice(0, 6)) {
+      const orig = c.scrollTop;
+      const max = c.scrollHeight;
+      for (let y = 0; y <= max; y += Math.max(200, c.clientHeight - 50)) {
+        c.scrollTop = y;
+        await new Promise((r) => setTimeout(r, 70));
+      }
+      c.scrollTop = orig;
+    }
+    scroller.scrollTop = originalY;
+    await new Promise((r) => setTimeout(r, 150));
   }
 
   function findFieldCardLabel(el) {
