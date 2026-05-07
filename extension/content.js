@@ -594,19 +594,22 @@
         }
       }
     }
-    // Campo "Assinatura" consolidado (textarea/contenteditable)
-    const assinaturaLines = [t.nome, t.conselho, t.especialidade, dataBR].filter(Boolean);
+    // Campo "Assinatura" consolidado (textarea/input/contenteditable)
+    const assinaturaLines = [t.nome, t.conselho, t.especialidade, dataBR ? `Data: ${dataBR}` : ""].filter(Boolean);
     if (assinaturaLines.length) {
-      const consolidado = assinaturaLines.join("\n");
+      const multi = assinaturaLines.join("\n");
+      const single = assinaturaLines.join(" — ");
       for (const f of allFields) {
         if (used.has(f.el)) continue;
-        if (!/assinatura|rodap[ée]/i.test(f.nome)) continue;
+        if (!/assinatura|assinar|signature|rodap[ée]/i.test(f.nome)) continue;
         const tag = f.el.tagName;
         const isEditable = f.el.getAttribute && f.el.getAttribute("contenteditable") === "true";
-        if (tag !== "TEXTAREA" && !isEditable) continue;
+        const isTextInput = tag === "INPUT" && /^(text|search|)$/i.test(f.el.type || "text");
+        if (tag !== "TEXTAREA" && !isEditable && !isTextInput) continue;
         const cur = (f.el.value ?? f.el.innerText ?? "").trim();
         if (cur) continue; // não sobrescreve
-        try { setNativeValue(f.el, consolidado); used.add(f.el); n++; } catch (e) { /* ignore */ }
+        const v = isTextInput ? single : multi;
+        try { setNativeValue(f.el, v); used.add(f.el); n++; } catch (e) { /* ignore */ }
       }
     }
     return n;

@@ -172,8 +172,8 @@ function ConfigPage() {
 
         {c && (
           <Card className="p-6">
-            <h2 className="font-display text-xl font-semibold">Dados do terapeuta</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Usados como assinatura em toda evolução gerada pela extensão. A data da sessão é preenchida automaticamente com a data de hoje.</p>
+            <h2 className="font-display text-xl font-semibold">Assinatura do terapeuta responsável pela evolução</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Esses dados são inseridos automaticamente no campo Assinatura de cada evolução gerada pela extensão. A data é preenchida com a data de hoje.</p>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <div className="space-y-2"><Label>Nome</Label>
                 <Input value={c.terapeuta_nome ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_nome: e.target.value })} />
