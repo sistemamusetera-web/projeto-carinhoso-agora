@@ -297,6 +297,7 @@
         </div>
         <div style="display:flex;gap:6px;align-items:center;margin-left:8px">
           <button class="evo-chat-redetect" title="Re-detectar campos">↻</button>
+          <button class="evo-chat-min" title="Minimizar">—</button>
           <button class="evo-chat-close" title="Fechar">×</button>
         </div>
       </div>
