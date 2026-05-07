@@ -59,8 +59,19 @@
   }
 
   function isInsideChrome(el) {
-    // ignora inputs dentro de barra lateral, header global, sidebar do chat
-    return !!el.closest(".evo-chat, nav, header, [class*='sidebar'], [class*='Sidebar'], [class*='menu'], [class*='Menu'], [role='navigation']");
+    // ignora apenas o próprio chat e nav/header globais
+    return !!el.closest(".evo-chat, nav[role='navigation'], header[role='banner']");
+  }
+
+  function collectAllRoots() {
+    // raiz principal + iframes same-origin acessíveis
+    const roots = [document];
+    for (const f of document.querySelectorAll("iframe")) {
+      try {
+        if (f.contentDocument) roots.push(f.contentDocument);
+      } catch (e) { /* cross-origin */ }
+    }
+    return roots;
   }
 
   async function preScrollEvolutionPanel() {
