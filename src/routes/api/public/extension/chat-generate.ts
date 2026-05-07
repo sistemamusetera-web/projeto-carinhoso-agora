@@ -111,17 +111,18 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
 
           const sys = `${baseSys}
 
-MODO EXPANSÃO INTELIGENTE:
+MODO PREENCHIMENTO OBRIGATÓRIO:
 - O terapeuta normalmente envia notas curtas, telegráficas ou tópicos rápidos.
 - Sua tarefa é EXPANDIR essas notas em texto clínico profissional, rico e bem desenvolvido para CADA campo do formulário.
 - Use o perfil, objetivos e histórico do paciente para inferir desdobramentos plausíveis e coerentes (linguagem, postura terapêutica, recursos típicos da abordagem).
 - NUNCA invente fatos clínicos novos que mudem a história do paciente: nada de novos diagnósticos, medicações, eventos familiares, datas ou pessoas que não foram mencionadas.
-- Para CADA campo do formulário, sempre produza conteúdo substantivo (3 a 8 frases, conforme o campo). Só use uma observação neutra do tipo "Sem intercorrências relevantes nesta sessão." quando realmente não houver nenhuma base para inferir.
+- É ABSOLUTAMENTE PROIBIDO retornar qualquer campo vazio, com "-", "N/A", "sem informações", "sem intercorrências" ou frases genéricas curtas. TODO campo deve ter no MÍNIMO 3 frases completas (cerca de 40 palavras), redigidas em texto clínico profissional.
+- Mesmo quando a nota do terapeuta for muito curta ou ausente, você DEVE inferir conteúdo plausível para todos os campos a partir do perfil, objetivos terapêuticos, histórico recente e abordagem usual — sem inventar fatos novos.
 - Mantenha coerência cruzada: descrição da sessão ↔ recursos ↔ comportamento ↔ respostas ↔ plano ↔ próximos objetivos devem contar a MESMA história.
 - Evite repetir literalmente trechos do histórico; reescreva.
 - Estilo: ${estilo}.
 - Você DEVE responder usando a função "preencher_evolucao" com EXATAMENTE estas chaves: ${campos.map((c) => JSON.stringify(c)).join(", ")}.
-- Cada valor deve ser um texto clínico profissional, direto, sem títulos repetindo o nome do campo.
+- Cada valor deve ser um texto clínico profissional, direto, sem títulos repetindo o nome do campo, e NUNCA vazio.
 
 CONTEXTO DO PACIENTE:
 Nome: ${paciente.nome}
