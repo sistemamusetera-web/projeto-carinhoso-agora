@@ -1,6 +1,28 @@
 // Service worker — proxy para chamadas ao painel (evita CORS no content script)
 // Mantém a resposta assíncrona viva e devolve mensagens de erro úteis.
 
+// Ao clicar no ícone da extensão, abre o chat na aba ativa (se for clínica nas nuvens)
+// ou injeta o content script e tenta novamente.
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab?.id) return;
+  const trySend = () =>
+    chrome.tabs.sendMessage(tab.id, { type: "open-chat" }).catch(() => null);
+  let resp = await trySend();
+  if (!resp) {
+    // injeta o content script (caso a página não tenha disparado o match ainda)
+    try {
+      await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ["content.css"] });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["content.js"] });
+      await new Promise((r) => setTimeout(r, 200));
+      resp = await trySend();
+    } catch (e) {
+      // página não permite injeção (ex: chrome://). Abre uma nova aba do painel.
+      const cfg = await chrome.storage.local.get(["panelUrl"]);
+      if (cfg.panelUrl) chrome.tabs.create({ url: cfg.panelUrl });
+    }
+  }
+});
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type !== "generate" && msg?.type !== "confirm" && msg?.type !== "chat-generate") return;
 
