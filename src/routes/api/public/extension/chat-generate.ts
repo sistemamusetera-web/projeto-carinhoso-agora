@@ -187,7 +187,7 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
                 tools,
                 tool_choice: { type: "function", function: { name: "preencher_evolucao" } },
                 temperature: 0.6,
-                max_tokens: 4000,
+                max_tokens: 6000,
               }),
               signal: ctrl.signal,
             });
