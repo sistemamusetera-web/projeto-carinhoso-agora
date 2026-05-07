@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Agente de Evolução Terapêutica",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Gera evoluções terapêuticas com IA dentro do Clínica nas Nuvens.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
@@ -9,8 +9,7 @@
     "https://*.lovable.app/*"
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "Agente de Evolução"
+    "default_title": "Agente de Evolução — abrir chat"
   },
   "background": { "service_worker": "background.js" },
   "content_scripts": [
