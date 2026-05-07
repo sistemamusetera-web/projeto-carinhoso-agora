@@ -7,6 +7,13 @@
 
   // ------------------- helpers -------------------
   function setNativeValue(el, value) {
+    if (el.getAttribute && el.getAttribute("contenteditable") === "true") {
+      el.focus();
+      el.innerText = value;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("blur", { bubbles: true }));
+      return;
+    }
     const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
     setter.call(el, value);
