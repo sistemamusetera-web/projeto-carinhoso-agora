@@ -528,28 +528,47 @@
   }
 
   function fillTherapistFields(t) {
-    if (!t || (!t.nome && !t.conselho && !t.especialidade)) return 0;
+    if (!t) t = {};
+    // cache para o cartão de assinatura
+    try { chrome.storage.local.set({ terapeuta: t }); } catch (e) { /* ignore */ }
+    const dataBR = formatDateBR();
     const map = [
-      { val: t.nome, rx: /(terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente)/i },
-      { val: t.conselho, rx: /(conselho|crp|crm|cpf|registro|n[uú]mero do conselho)/i },
+      { val: t.nome, rx: /(terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente|assinatura.*nome)/i },
+      { val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro|n[uú]mero do conselho)/i },
       { val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
+      { val: "__DATE__", rx: /(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|assinatura.*data|data.*sess|data.*atend)/i },
     ];
-    // detecta TODOS os campos visíveis (não só textareas)
     const allFields = detectFormFields();
     let n = 0;
     const used = new Set();
     for (const m of map) {
-      if (!m.val) continue;
+      if (m.val === undefined || m.val === null || m.val === "") continue;
       for (const f of allFields) {
         if (used.has(f.el)) continue;
         if (m.rx.test(f.nome)) {
           try {
-            setNativeValue(f.el, m.val);
+            const v = m.val === "__DATE__" ? formatDateForField(f.el) : m.val;
+            setNativeValue(f.el, v);
             used.add(f.el);
             n++;
           } catch (e) { /* ignore */ }
           break;
         }
+      }
+    }
+    // Campo "Assinatura" consolidado (textarea/contenteditable)
+    const assinaturaLines = [t.nome, t.conselho, t.especialidade, dataBR].filter(Boolean);
+    if (assinaturaLines.length) {
+      const consolidado = assinaturaLines.join("\n");
+      for (const f of allFields) {
+        if (used.has(f.el)) continue;
+        if (!/assinatura|rodap[ée]/i.test(f.nome)) continue;
+        const tag = f.el.tagName;
+        const isEditable = f.el.getAttribute && f.el.getAttribute("contenteditable") === "true";
+        if (tag !== "TEXTAREA" && !isEditable) continue;
+        const cur = (f.el.value ?? f.el.innerText ?? "").trim();
+        if (cur) continue; // não sobrescreve
+        try { setNativeValue(f.el, consolidado); used.add(f.el); n++; } catch (e) { /* ignore */ }
       }
     }
     return n;
