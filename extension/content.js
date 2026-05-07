@@ -270,6 +270,10 @@
     if (document.querySelector(".evo-chat")) return;
     const paciente = detectPatientFromPage();
     const cfg = await getConfig();
+    const cachedTher = await new Promise((res) => {
+      try { chrome.storage.local.get(["terapeuta"], (o) => res((o && o.terapeuta) || {})); }
+      catch (e) { res({}); }
+    });
     chatState = {
       pacienteNome: paciente.nome,
       pacienteIdExterno: paciente.externalId,
