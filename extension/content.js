@@ -36,6 +36,31 @@
     return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
 
+  // ------------------- data -------------------
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function todayParts() {
+    const d = new Date();
+    return { d: pad2(d.getDate()), m: pad2(d.getMonth() + 1), y: String(d.getFullYear()) };
+  }
+  function formatDateForField(el) {
+    const { d, m, y } = todayParts();
+    if (el && el.tagName === "INPUT" && (el.type || "").toLowerCase() === "date") return `${y}-${m}-${d}`;
+    const hints = [
+      el?.getAttribute?.("placeholder"),
+      el?.getAttribute?.("pattern"),
+      el?.getAttribute?.("aria-label"),
+      el?.value,
+    ].filter(Boolean).join(" ").toLowerCase();
+    if (/aaaa[\/-]mm[\/-]dd|yyyy[\/-]mm[\/-]dd/.test(hints)) return `${y}-${m}-${d}`;
+    if (/mm[\/-]dd[\/-]aaaa|mm[\/-]dd[\/-]yyyy/.test(hints)) return `${m}/${d}/${y}`;
+    if (/dd-mm-aaaa|dd-mm-yyyy/.test(hints)) return `${d}-${m}-${y}`;
+    return `${d}/${m}/${y}`; // pt-BR default
+  }
+  function formatDateBR() {
+    const { d, m, y } = todayParts();
+    return `${d}/${m}/${y}`;
+  }
+
   // ------------------- paciente -------------------
   function detectPatientFromPage() {
     const headings = Array.from(document.querySelectorAll("h1, h2, h3, [class*='nome'], [class*='paciente']"));
@@ -245,6 +270,10 @@
     if (document.querySelector(".evo-chat")) return;
     const paciente = detectPatientFromPage();
     const cfg = await getConfig();
+    const cachedTher = await new Promise((res) => {
+      try { chrome.storage.local.get(["terapeuta"], (o) => res((o && o.terapeuta) || {})); }
+      catch (e) { res({}); }
+    });
     chatState = {
       pacienteNome: paciente.nome,
       pacienteIdExterno: paciente.externalId,
@@ -280,6 +309,13 @@
         <input class="evo-chat-key" type="password" placeholder="API Key (evo_...)" value="${escapeHtml(cfg.apiKey || "")}" style="width:100%;box-sizing:border-box;padding:5px 7px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" />
         <button class="evo-chat-save-cfg" style="padding:5px;border:0;border-radius:4px;background:#374151;color:white;font-size:11px;font-weight:600;cursor:pointer">Salvar conexão</button>
       </div>
+      <div class="evo-chat-signature" style="padding:8px 12px;background:#ecfdf5;border-bottom:1px solid #d1fae5;font-size:11px;color:#065f46">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-weight:600">✍️ Assinatura</span>
+          <a href="#" class="evo-edit-ther" style="font-size:10px;color:#047857;text-decoration:underline">editar</a>
+        </div>
+        <div class="evo-sig-body"></div>
+      </div>
       <div class="evo-chat-fields">Detectando campos…</div>
       <div class="evo-chat-status" style="display:none"></div>
       <div class="evo-chat-msgs"></div>
@@ -304,6 +340,32 @@
       }
     };
     updateConnStatus(cfg);
+
+    const sigBody = panel.querySelector(".evo-sig-body");
+    const renderSig = (t) => {
+      const dataBR = formatDateBR();
+      if (!t || (!t.nome && !t.conselho && !t.especialidade)) {
+        sigBody.innerHTML = `<i style="color:#6b7280">Nenhum dado de terapeuta. <a href="#" class="evo-edit-ther2" style="color:#047857;text-decoration:underline">configurar agora</a></i><br/>📅 ${dataBR}`;
+        const a = sigBody.querySelector(".evo-edit-ther2");
+        if (a) a.onclick = (e) => { e.preventDefault(); openConfigPage(); };
+        return;
+      }
+      sigBody.innerHTML = [
+        t.nome ? `👤 ${escapeHtml(t.nome)}` : "",
+        t.conselho ? `🪪 ${escapeHtml(t.conselho)}` : "",
+        t.especialidade ? `🎯 ${escapeHtml(t.especialidade)}` : "",
+        `📅 ${dataBR}`,
+      ].filter(Boolean).join("<br/>");
+    };
+    chatState.terapeuta = cachedTher;
+    renderSig(cachedTher);
+    const openConfigPage = async () => {
+      const c = await getConfig();
+      const url = (c.panelUrl || "").replace(/\/$/, "");
+      window.open(url ? `${url}/configuracoes` : "about:blank", "_blank");
+    };
+    panel.querySelector(".evo-edit-ther").onclick = (e) => { e.preventDefault(); openConfigPage(); };
+    chatState.renderSig = renderSig;
     panel.querySelector(".evo-chat-save-cfg").onclick = async () => {
       const url = panel.querySelector(".evo-chat-url").value.trim().replace(/\/$/, "");
       const key = panel.querySelector(".evo-chat-key").value.trim();
@@ -490,6 +552,7 @@
     const camposResp = resp.data?.campos || {};
     const terapeuta = resp.data?.terapeuta || {};
     const filledTher = fillTherapistFields(terapeuta);
+    if (chatState.renderSig) chatState.renderSig(terapeuta);
     const filled = fillFields(camposResp);
     const therMsg = filledTher ? ` (+${filledTher} dado(s) do terapeuta)` : "";
     chatState.messages.push({
@@ -503,28 +566,47 @@
   }
 
   function fillTherapistFields(t) {
-    if (!t || (!t.nome && !t.conselho && !t.especialidade)) return 0;
+    if (!t) t = {};
+    // cache para o cartão de assinatura
+    try { chrome.storage.local.set({ terapeuta: t }); } catch (e) { /* ignore */ }
+    const dataBR = formatDateBR();
     const map = [
-      { val: t.nome, rx: /(terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente)/i },
-      { val: t.conselho, rx: /(conselho|crp|crm|cpf|registro|n[uú]mero do conselho)/i },
+      { val: t.nome, rx: /(terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente|assinatura.*nome)/i },
+      { val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro|n[uú]mero do conselho)/i },
       { val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
+      { val: "__DATE__", rx: /(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|assinatura.*data|data.*sess|data.*atend)/i },
     ];
-    // detecta TODOS os campos visíveis (não só textareas)
     const allFields = detectFormFields();
     let n = 0;
     const used = new Set();
     for (const m of map) {
-      if (!m.val) continue;
+      if (m.val === undefined || m.val === null || m.val === "") continue;
       for (const f of allFields) {
         if (used.has(f.el)) continue;
         if (m.rx.test(f.nome)) {
           try {
-            setNativeValue(f.el, m.val);
+            const v = m.val === "__DATE__" ? formatDateForField(f.el) : m.val;
+            setNativeValue(f.el, v);
             used.add(f.el);
             n++;
           } catch (e) { /* ignore */ }
           break;
         }
+      }
+    }
+    // Campo "Assinatura" consolidado (textarea/contenteditable)
+    const assinaturaLines = [t.nome, t.conselho, t.especialidade, dataBR].filter(Boolean);
+    if (assinaturaLines.length) {
+      const consolidado = assinaturaLines.join("\n");
+      for (const f of allFields) {
+        if (used.has(f.el)) continue;
+        if (!/assinatura|rodap[ée]/i.test(f.nome)) continue;
+        const tag = f.el.tagName;
+        const isEditable = f.el.getAttribute && f.el.getAttribute("contenteditable") === "true";
+        if (tag !== "TEXTAREA" && !isEditable) continue;
+        const cur = (f.el.value ?? f.el.innerText ?? "").trim();
+        if (cur) continue; // não sobrescreve
+        try { setNativeValue(f.el, consolidado); used.add(f.el); n++; } catch (e) { /* ignore */ }
       }
     }
     return n;
