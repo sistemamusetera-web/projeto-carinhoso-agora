@@ -94,19 +94,34 @@
     // e contém um texto curto identificando o campo.
     let cur = el.parentElement;
     let best = null;
-    for (let depth = 0; depth < 8 && cur; depth++) {
+    for (let depth = 0; depth < 12 && cur; depth++) {
       const inputs = cur.querySelectorAll("input[type='text'], input:not([type]), textarea");
       if (inputs.length > 1) break; // saímos do escopo do campo
-      // textos diretos no card, antes do input
       const texts = collectLeadingTexts(cur, el);
       const label = pickBestLabel(texts);
       if (label) best = label;
-      if (best && cur.querySelector(":scope > label, :scope > div, :scope > span, :scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > h4")) {
-        return best;
-      }
+      if (best) return best;
       cur = cur.parentElement;
     }
     return best;
+  }
+
+  function findLabelFromSiblings(el) {
+    // Fallback: caminha pelos previousElementSiblings e ancestrais procurando texto curto
+    let cur = el;
+    for (let d = 0; d < 6 && cur; d++) {
+      let sib = cur.previousElementSibling;
+      while (sib) {
+        const t = (sib.innerText || sib.textContent || "").trim().split("\n")[0].trim();
+        const cleaned = cleanLabel(t);
+        if (cleaned && cleaned.length <= 80 && !IGNORE_LABEL_RX.test(cleaned) && !/^[\d\s\-\/.:]+$/.test(cleaned)) {
+          return cleaned;
+        }
+        sib = sib.previousElementSibling;
+      }
+      cur = cur.parentElement;
+    }
+    return null;
   }
 
   function collectLeadingTexts(container, inputEl) {
