@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PacientesIdRouteImport } from './routes/pacientes.$id'
 import { Route as ApiPublicExtensionGenerateRouteImport } from './routes/api/public/extension/generate'
 import { Route as ApiPublicExtensionConfirmRouteImport } from './routes/api/public/extension/confirm'
+import { Route as ApiPublicExtensionChatGenerateRouteImport } from './routes/api/public/extension/chat-generate'
 
 const PacientesRoute = PacientesRouteImport.update({
   id: '/pacientes',
@@ -54,6 +55,12 @@ const ApiPublicExtensionConfirmRoute =
     path: '/api/public/extension/confirm',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicExtensionChatGenerateRoute =
+  ApiPublicExtensionChatGenerateRouteImport.update({
+    id: '/api/public/extension/chat-generate',
+    path: '/api/public/extension/chat-generate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +68,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
+  '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
   '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
   '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
 }
@@ -70,6 +78,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
+  '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
   '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
   '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
 }
@@ -80,6 +89,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
+  '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
   '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
   '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
 }
@@ -91,6 +101,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pacientes'
     | '/pacientes/$id'
+    | '/api/public/extension/chat-generate'
     | '/api/public/extension/confirm'
     | '/api/public/extension/generate'
   fileRoutesByTo: FileRoutesByTo
@@ -100,6 +111,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pacientes'
     | '/pacientes/$id'
+    | '/api/public/extension/chat-generate'
     | '/api/public/extension/confirm'
     | '/api/public/extension/generate'
   id:
@@ -109,6 +121,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/pacientes'
     | '/pacientes/$id'
+    | '/api/public/extension/chat-generate'
     | '/api/public/extension/confirm'
     | '/api/public/extension/generate'
   fileRoutesById: FileRoutesById
@@ -118,6 +131,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   LoginRoute: typeof LoginRoute
   PacientesRoute: typeof PacientesRouteWithChildren
+  ApiPublicExtensionChatGenerateRoute: typeof ApiPublicExtensionChatGenerateRoute
   ApiPublicExtensionConfirmRoute: typeof ApiPublicExtensionConfirmRoute
   ApiPublicExtensionGenerateRoute: typeof ApiPublicExtensionGenerateRoute
 }
@@ -173,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicExtensionConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/extension/chat-generate': {
+      id: '/api/public/extension/chat-generate'
+      path: '/api/public/extension/chat-generate'
+      fullPath: '/api/public/extension/chat-generate'
+      preLoaderRoute: typeof ApiPublicExtensionChatGenerateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -193,6 +214,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   LoginRoute: LoginRoute,
   PacientesRoute: PacientesRouteWithChildren,
+  ApiPublicExtensionChatGenerateRoute: ApiPublicExtensionChatGenerateRoute,
   ApiPublicExtensionConfirmRoute: ApiPublicExtensionConfirmRoute,
   ApiPublicExtensionGenerateRoute: ApiPublicExtensionGenerateRoute,
 }

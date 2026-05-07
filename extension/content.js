@@ -1,169 +1,281 @@
-// Injetado nas páginas do Clínica nas Nuvens.
-// Detecta listas de pacientes/atendimentos e adiciona botão "Gerar evolução com IA".
-// Os seletores reais devem ser ajustados após inspeção da interface real;
-// este script usa heurísticas resilientes baseadas em texto.
+// Agente de Evolução Terapêutica — content script
+// Injeta botão "Gerar evolução com IA" e abre um chat lateral onde o
+// terapeuta descreve a sessão. A IA devolve JSON estruturado por campo
+// e a extensão preenche cada campo do formulário do Clínica nas Nuvens.
 
 (function () {
   const BTN_CLASS = "evo-ai-btn";
   const PROCESSED = "data-evo-ai-processed";
+  let chatState = null; // { messages, fields, pacienteNome, pacienteIdExterno }
 
-  function findPatientRows() {
-    // Heurística 1: procurar linhas/cards que contenham botões "Atender", "Atendimento" ou "Evoluir"
-    const candidates = Array.from(document.querySelectorAll("tr, li, .card, .panel, [class*='paciente'], [class*='atendimento']"));
-    return candidates.filter((el) => {
-      if (el.hasAttribute(PROCESSED)) return false;
-      const t = (el.innerText || "").toLowerCase();
-      return /atender|atendimento|evoluir|evolu[cç][aã]o/.test(t) && el.querySelector("button, a");
-    });
-  }
-
-  function extractPatientInfo(row) {
-    // Tenta achar o nome do paciente — primeiro elemento textual relevante
-    const nameEl = row.querySelector("[class*='nome'], strong, b, td, .paciente-nome");
-    let nome = "";
-    if (nameEl) nome = nameEl.innerText.trim().split("\n")[0].trim();
-    if (!nome) nome = (row.innerText || "").trim().split("\n")[0].trim();
-
-    // Tenta achar um id externo em data-attrs ou hrefs
-    let externalId = null;
-    const link = row.querySelector("a[href*='paciente'], a[href*='atendimento']");
-    if (link) {
-      const m = link.getAttribute("href").match(/(\d{3,})/);
-      if (m) externalId = m[1];
-    }
-    const dataAttr = row.querySelector("[data-paciente-id], [data-id]");
-    if (dataAttr) {
-      externalId = dataAttr.getAttribute("data-paciente-id") || dataAttr.getAttribute("data-id") || externalId;
-    }
-    return { nome, externalId };
-  }
-
-  function showBanner(text, action) {
-    document.querySelectorAll(".evo-ai-banner").forEach((n) => n.remove());
-    const div = document.createElement("div");
-    div.className = "evo-ai-banner";
-    div.innerHTML = `<strong>Agente de Evolução</strong><div>${text}</div>`;
-    if (action) {
-      const b = document.createElement("button");
-      b.textContent = action.label;
-      b.onclick = action.onClick;
-      div.appendChild(b);
-    }
-    const close = document.createElement("button");
-    close.textContent = "Fechar";
-    close.style.marginLeft = "8px";
-    close.style.background = "#9ca3af";
-    close.onclick = () => div.remove();
-    div.appendChild(close);
-    document.body.appendChild(div);
-    setTimeout(() => div.remove(), 30000);
-  }
-
-  function findEvolucaoTextarea() {
-    // Procura a textarea da evolução: heurística por placeholder/label próximo
-    const tas = Array.from(document.querySelectorAll("textarea"));
-    if (!tas.length) return null;
-    // Prefere textarea visível e maior
-    return tas
-      .filter((t) => t.offsetParent !== null)
-      .sort((a, b) => (b.offsetHeight * b.offsetWidth) - (a.offsetHeight * a.offsetWidth))[0] || tas[0];
-  }
-
+  // ------------------- helpers -------------------
   function setNativeValue(el, value) {
     const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
     const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
     setter.call(el, value);
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
+    el.dispatchEvent(new Event("blur", { bubbles: true }));
   }
 
-  function fillEvolucao(text) {
-    const ta = findEvolucaoTextarea();
-    if (!ta) {
-      showBanner("Não encontrei o campo de evolução. Cole manualmente:<br/><textarea style='width:100%;height:120px;margin-top:6px'>" + text.replace(/</g, "&lt;") + "</textarea>");
-      return false;
+  function normalize(s) {
+    return (s || "")
+      .toString()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  }
+
+  // ------------------- detecção de paciente -------------------
+  function detectPatientFromPage() {
+    // Tela de atendimento aberto: nome em h1/h2 ou no topo
+    const headings = Array.from(document.querySelectorAll("h1, h2, h3, [class*='nome'], [class*='paciente']"));
+    for (const h of headings) {
+      const t = (h.innerText || "").trim();
+      // nomes em CAPS LOCK no Clínica nas Nuvens
+      if (t && /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{6,}/.test(t.split("\n")[0])) {
+        return { nome: t.split("\n")[0].trim(), externalId: extractIdFromUrl() };
+      }
     }
-    setNativeValue(ta, text);
-    ta.focus();
-    return true;
+    // fallback: pega primeiro nome em caps no topo
+    const all = document.body.innerText.split("\n").map((s) => s.trim()).filter(Boolean);
+    const found = all.find((l) => /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{5,}$/.test(l));
+    return { nome: found || "", externalId: extractIdFromUrl() };
   }
 
-  async function handleGenerate(row, btn) {
-    const info = extractPatientInfo(row);
-    if (!info.nome) {
-      showBanner("Não foi possível identificar o paciente.");
+  function extractIdFromUrl() {
+    const m = location.pathname.match(/\/(\d{5,})/);
+    return m ? m[1] : null;
+  }
+
+  // ------------------- detecção de campos -------------------
+  function detectFormFields() {
+    // Procura textareas e inputs visíveis com um label/título acima
+    const inputs = Array.from(document.querySelectorAll("textarea, input[type='text']")).filter(
+      (el) => el.offsetParent !== null && !el.disabled && !el.readOnly
+    );
+    const fields = [];
+    for (const el of inputs) {
+      const label = findLabelFor(el);
+      if (!label) continue;
+      // ignorar campos minúsculos (provavelmente busca/filtro)
+      if (el.tagName === "INPUT" && el.offsetWidth < 200) continue;
+      fields.push({ nome: label, el });
+    }
+    // dedup por nome (mantém primeiro)
+    const seen = new Set();
+    return fields.filter((f) => {
+      const k = normalize(f.nome);
+      if (!k || seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }
+
+  function findLabelFor(el) {
+    // 1) <label for="id">
+    if (el.id) {
+      const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      if (lab) return cleanLabel(lab.innerText);
+    }
+    // 2) ancestor label
+    const parentLabel = el.closest("label");
+    if (parentLabel) return cleanLabel(parentLabel.innerText.replace(el.value || "", ""));
+    // 3) sibling/anterior elemento de texto
+    let cur = el.parentElement;
+    for (let depth = 0; depth < 4 && cur; depth++) {
+      // procura headings/divs/spans com texto curto antes do input
+      const candidates = Array.from(cur.children);
+      const idx = candidates.indexOf(el.closest(cur.children[0]?.tagName || "*") || el);
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        const c = candidates[i];
+        if (c === el || c.contains(el)) continue;
+        const txt = (c.innerText || "").trim().split("\n")[0];
+        if (txt && txt.length < 80 && !/^https?:/.test(txt)) {
+          return cleanLabel(txt);
+        }
+      }
+      cur = cur.parentElement;
+    }
+    // 4) placeholder
+    if (el.placeholder) return cleanLabel(el.placeholder);
+    return null;
+  }
+
+  function cleanLabel(s) {
+    return (s || "")
+      .replace(/\*/g, "")
+      .replace(/\(obrigat[óo]rio\)/gi, "")
+      .replace(/obrigat[óo]rio/gi, "")
+      .trim();
+  }
+
+  // ------------------- chat panel -------------------
+  function openChat() {
+    if (document.querySelector(".evo-chat")) return;
+    const fields = detectFormFields();
+    const paciente = detectPatientFromPage();
+
+    chatState = {
+      pacienteNome: paciente.nome,
+      pacienteIdExterno: paciente.externalId,
+      fields,
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "Olá! Me conte como foi a sessão de hoje em linguagem natural: como a criança chegou, o que foi trabalhado, recursos e dinâmicas usadas, comportamento, respostas, observações e próximos passos. Eu organizo tudo nos campos do formulário.",
+        },
+      ],
+    };
+
+    const panel = document.createElement("div");
+    panel.className = "evo-chat";
+    panel.innerHTML = `
+      <div class="evo-chat-header">
+        <div>
+          <strong>Agente de Evolução</strong>
+          <small>${paciente.nome ? escapeHtml(paciente.nome) : "Paciente não detectado"}</small>
+        </div>
+        <button class="evo-chat-close" title="Fechar">×</button>
+      </div>
+      <div class="evo-chat-fields">
+        ${
+          fields.length
+            ? `<b>${fields.length} campo(s) detectado(s):</b> ${fields.map((f) => escapeHtml(f.nome)).join(" · ")}`
+            : `<b>Nenhum campo de formulário detectado nesta tela.</b> Abra um atendimento com o modelo de evolução para preenchimento automático.`
+        }
+      </div>
+      <div class="evo-chat-msgs"></div>
+      <div class="evo-chat-input">
+        <textarea placeholder="Descreva a sessão de hoje..."></textarea>
+        <div class="evo-chat-actions">
+          <button class="evo-btn-secondary evo-clear">Limpar</button>
+          <button class="evo-btn-primary evo-send">Gerar e preencher</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+
+    panel.querySelector(".evo-chat-close").onclick = () => panel.remove();
+    panel.querySelector(".evo-clear").onclick = () => {
+      chatState.messages = chatState.messages.slice(0, 1);
+      renderMsgs(panel);
+      panel.querySelector("textarea").value = "";
+    };
+    const textarea = panel.querySelector("textarea");
+    const sendBtn = panel.querySelector(".evo-send");
+    const send = () => {
+      const txt = textarea.value.trim();
+      if (!txt) return;
+      chatState.messages.push({ role: "user", content: txt });
+      textarea.value = "";
+      renderMsgs(panel);
+      generateAndFill(panel, sendBtn);
+    };
+    sendBtn.onclick = send;
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+    });
+
+    renderMsgs(panel);
+  }
+
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function renderMsgs(panel) {
+    const box = panel.querySelector(".evo-chat-msgs");
+    box.innerHTML = "";
+    for (const m of chatState.messages) {
+      const div = document.createElement("div");
+      div.className = "evo-msg evo-msg-" + m.role;
+      div.textContent = m.content;
+      box.appendChild(div);
+    }
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function pushSystemMsg(panel, text) {
+    chatState.messages.push({ role: "system", content: text });
+    renderMsgs(panel);
+  }
+
+  function generateAndFill(panel, sendBtn) {
+    if (!chatState.fields.length) {
+      pushSystemMsg(panel, "Nenhum campo detectado para preencher. Abra a tela do atendimento.");
       return;
     }
-    btn.disabled = true;
-    btn.textContent = "Gerando…";
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Gerando…";
     chrome.runtime.sendMessage(
-      { type: "generate", payload: { pacienteNome: info.nome, pacienteIdExterno: info.externalId } },
+      {
+        type: "chat-generate",
+        payload: {
+          pacienteNome: chatState.pacienteNome,
+          pacienteIdExterno: chatState.pacienteIdExterno,
+          mensagens: chatState.messages.filter((m) => m.role !== "system"),
+          campos: chatState.fields.map((f) => f.nome),
+        },
+      },
       (resp) => {
-        btn.disabled = false;
-        btn.textContent = "Gerar evolução com IA";
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Gerar e preencher";
         if (!resp?.ok) {
-          showBanner("Erro: " + (resp?.error || "falha desconhecida"));
+          pushSystemMsg(panel, "Erro: " + (resp?.error || "falha desconhecida"));
           return;
         }
-        const ok = fillEvolucao(resp.data.evolucao);
-        if (ok) {
-          showBanner("Evolução preenchida. Revise e clique em <b>Salvar</b> no sistema.", {
-            label: "Marcar como salva",
-            onClick: () => {
-              chrome.runtime.sendMessage({ type: "confirm", payload: { evolucaoId: resp.data.evolucaoId } });
-              document.querySelectorAll(".evo-ai-banner").forEach((n) => n.remove());
-            },
-          });
-        }
+        const camposResp = resp.data?.campos || {};
+        const filled = fillFields(camposResp);
+        chatState.messages.push({
+          role: "assistant",
+          content:
+            `Preenchi ${filled} de ${chatState.fields.length} campo(s).\n\n` +
+            Object.entries(camposResp)
+              .map(([k, v]) => `▸ ${k}\n${v}`)
+              .join("\n\n") +
+            `\n\nRevise e ajuste antes de finalizar o atendimento. Se quiser refazer, descreva ajustes e clique novamente.`,
+        });
+        renderMsgs(panel);
       }
     );
   }
 
-  function attachButtons() {
-    const rows = findPatientRows();
-    rows.forEach((row) => {
-      row.setAttribute(PROCESSED, "1");
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = BTN_CLASS;
-      btn.textContent = "Gerar evolução com IA";
-      btn.onclick = (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        handleGenerate(row, btn);
-      };
-      // Tenta colocar perto do botão de ação
-      const actionBtn = row.querySelector("button, a");
-      if (actionBtn?.parentElement) actionBtn.parentElement.appendChild(btn);
-      else row.appendChild(btn);
-    });
-
-    // Se estamos numa tela de evolução de um único paciente, adiciona botão flutuante
-    const ta = findEvolucaoTextarea();
-    if (ta && !document.querySelector(".evo-ai-floating")) {
-      const titleEl = document.querySelector("h1, h2, .titulo, [class*='titulo']");
-      const nome = titleEl?.innerText?.trim().split("\n")[0] || "";
-      if (nome && /evolu[cç][aã]o/i.test(document.body.innerText)) {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = BTN_CLASS + " evo-ai-floating";
-        btn.style.position = "fixed";
-        btn.style.top = "16px";
-        btn.style.right = "16px";
-        btn.style.zIndex = "999999";
-        btn.textContent = "Gerar evolução com IA";
-        btn.onclick = () => {
-          handleGenerate({ innerText: nome, querySelector: () => null }, btn);
-        };
-        document.body.appendChild(btn);
+  function fillFields(camposResp) {
+    let count = 0;
+    for (const f of chatState.fields) {
+      const key = normalize(f.nome);
+      // match exato ou por inclusão
+      let val = null;
+      for (const [k, v] of Object.entries(camposResp)) {
+        const nk = normalize(k);
+        if (nk === key || nk.includes(key) || key.includes(nk)) { val = v; break; }
+      }
+      if (val) {
+        try { setNativeValue(f.el, val); count++; } catch (e) { /* ignore */ }
       }
     }
+    return count;
+  }
+
+  // ------------------- botão flutuante -------------------
+  function ensureFloatingButton() {
+    if (document.querySelector(".evo-ai-floating")) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = BTN_CLASS + " evo-ai-floating";
+    btn.textContent = "💬 Gerar evolução com IA";
+    btn.onclick = (e) => { e.preventDefault(); openChat(); };
+    document.body.appendChild(btn);
   }
 
   const obs = new MutationObserver(() => {
     clearTimeout(window.__evoAiDebounce);
-    window.__evoAiDebounce = setTimeout(attachButtons, 400);
+    window.__evoAiDebounce = setTimeout(ensureFloatingButton, 400);
   });
   obs.observe(document.body, { childList: true, subtree: true });
-  attachButtons();
+  ensureFloatingButton();
 })();

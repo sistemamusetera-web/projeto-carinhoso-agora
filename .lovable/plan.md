@@ -1,115 +1,85 @@
 
-# Agente de Evolução Terapêutica — Painel Web + Extensão Chrome
+## Objetivo
 
-Vamos transformar o seu projeto Python em duas peças que trabalham juntas:
+Trocar o fluxo atual ("clicar → IA gera tudo sozinha → cola na textarea") por:
 
-1. **Painel web** (construído no Lovable) — onde você cadastra pacientes, perfis, objetivos, vê histórico de evoluções e ajusta o prompt da IA.
-2. **Extensão Chrome** (gerada pelo Lovable, instalada manualmente uma vez) — roda dentro do seu navegador já logado no Clínica nas Nuvens, lê os pacientes do dia, gera a evolução com IA via o painel e preenche o campo automaticamente.
+1. Usuário clica em **Gerar evolução com IA** dentro do Clínica nas Nuvens
+2. Abre um **mini-chat lateral** na própria página
+3. Terapeuta digita em linguagem natural as principais demandas, desafios, recursos usados, observações da sessão
+4. IA processa essas notas + perfil + histórico do paciente
+5. IA devolve um **JSON estruturado** com um valor por campo do formulário (Como a criança chegou, Recursos usados, Dinâmicas usadas, Comportamento, etc.)
+6. Extensão preenche **cada campo individualmente** na tela do prontuário
+7. Banner pede revisão antes do terapeuta clicar em **Finalizar atendimento**
 
-A IA é o **Lovable AI Gateway** (Gemini/GPT) — sem precisar gerenciar chave da OpenAI.
+## Mudanças
 
----
+### 1. Extensão Chrome — novo painel de chat (`extension/`)
 
-## Arquitetura
+- `chat.css` + injeção de um painel lateral fixo (largura ~380px, à direita) quando o usuário clica no botão "Gerar evolução com IA" dentro de um atendimento aberto.
+- Estrutura do painel:
+  - Cabeçalho com nome do paciente detectado
+  - Área de mensagens (estilo chat: terapeuta + assistente)
+  - Campo de texto multi-linha + botão "Enviar"
+  - Botões de ação: **Preencher formulário**, **Refazer**, **Fechar**
+- Estado mantido em memória da página (não persiste entre reloads).
+- Mensagens iniciais do assistente sugerindo o que descrever ("Conte como foi a sessão: como a criança chegou, recursos usados, comportamentos, respostas, próximos passos…").
 
-```text
- ┌─────────────────────────┐         ┌──────────────────────────┐
- │  Chrome do terapeuta    │         │  Painel Web (Lovable)    │
- │                         │         │                          │
- │  ┌───────────────────┐  │  HTTPS  │  - Login terapeuta       │
- │  │ Extensão Chrome   │◄─┼────────►│  - CRUD pacientes        │
- │  │ (content script)  │  │         │  - Histórico evoluções   │
- │  └─────────┬─────────┘  │         │  - Ajuste de prompt      │
- │            │ DOM        │         │  - Endpoint /api/generate│
- │            ▼            │         │    (chama Lovable AI)    │
- │  app.clinicanasnuvens   │         │                          │
- │  .com.br                │         │  Banco: Lovable Cloud    │
- └─────────────────────────┘         └──────────────────────────┘
+### 2. Detecção de campos do formulário (`content.js`)
+
+Hoje preenche só a maior textarea. Precisa mapear os campos visíveis (screenshot 6):
+- Como a criança chegou
+- Recursos usados
+- Dinâmicas usadas
+- (e outros campos do modelo "Evolução terapêutica Musicoterapia")
+
+Estratégia: para cada `<label>`/título de campo visível, achar o input/textarea associado (próximo irmão, ou via `for`/`id`). Construir um array `[{ campoNome, elemento }]` e enviar os nomes dos campos para o backend, para que a IA gere exatamente esses.
+
+### 3. Backend — novo endpoint `/api/public/extension/chat-generate`
+
+Substitui (ou complementa) o atual `generate.ts`. Recebe:
+```
+{
+  pacienteNome, pacienteIdExterno,
+  mensagens: [{role, content}],   // conversa do chat
+  campos: ["Como a criança chegou", "Recursos usados", ...]
+}
 ```
 
-A extensão NUNCA chama a IA direto — sempre passa pelo painel, então a chave fica protegida e o histórico fica salvo no banco.
+Fluxo no handler:
+1. Autentica via `x-api-key` (igual hoje)
+2. Resolve paciente (igual hoje)
+3. Carrega perfil + objetivos + 5 últimas evoluções
+4. Chama Lovable AI Gateway com **tool calling / structured output**, forçando JSON com chaves = `campos`
+5. Salva uma `evolucao` consolidada (concatenando todos os campos) no banco
+6. Retorna `{ campos: { "Como a criança chegou": "...", "Recursos usados": "...", ... }, evolucaoId }`
 
----
+System prompt instrui: usar SOMENTE as observações do terapeuta + histórico, não inventar, manter coerência clínica, estilo configurado em `prompt_config`.
 
-## Etapa 1 — Painel Web (Lovable Cloud)
+### 4. Preenchimento multi-campo (`content.js`)
 
-**Backend (Lovable Cloud / Supabase):**
-- Auth por e-mail/senha para o terapeuta.
-- Tabelas:
-  - `pacientes` (id, user_id, nome_externo_id*, nome, perfil, objetivos, estilo, ativo)
-  - `evolucoes` (id, paciente_id, conteudo, criada_em, origem: 'manual'|'extensao')
-  - `prompt_config` (user_id, system_prompt, modelo, estilo padrão)
-- RLS: cada terapeuta só vê seus próprios dados.
-- `nome_externo_id` = identificador do paciente no Clínica nas Nuvens (a extensão envia, o painel casa).
+Após receber a resposta, para cada `{campoNome, elemento}`:
+- Se o nome bate (case-insensitive, normalizado) com uma chave do JSON → `setNativeValue(elemento, valor)` disparando `input`/`change` para o React/Vue do Clínica nas Nuvens reconhecer.
+- Campos sem match ficam vazios (terapeuta vê e completa).
+- Banner: "Campos preenchidos. Revise antes de finalizar."
 
-**Telas (rotas TanStack):**
-- `/login` — autenticação.
-- `/` (dashboard) — visão do dia, últimas evoluções geradas.
-- `/pacientes` — lista + busca.
-- `/pacientes/$id` — perfil, objetivos, histórico, edição.
-- `/configuracoes` — system prompt editável, modelo padrão, chave de API da extensão.
+### 5. Botões extras nas telas (screenshots 4 e 5)
 
-**Endpoints (server routes / server functions):**
-- `POST /api/public/extension/generate` — recebe `{ apiKey, pacienteNome, pacienteIdExterno }`, retorna `{ evolucao }`. Verifica chave, busca/cria paciente, monta prompt com perfil + últimos 5 históricos, chama Lovable AI, salva a evolução no banco e devolve o texto.
-- `POST /api/public/extension/confirm` — marca evolução como "preenchida no sistema" (após a extensão confirmar inserção).
-- Ambos com CORS aberto + autenticação via API key longa por terapeuta (gerada em `/configuracoes`).
+Manter botão "Gerar evolução com IA" também na tela de **Atendimentos do dia** (lista) e no **Prontuário**, mas nessas telas o clique apenas navega/abre o atendimento — o chat só aparece dentro do atendimento aberto (onde os campos existem).
 
----
+### 6. Repackage do `.zip`
 
-## Etapa 2 — Extensão Chrome (Manifest V3)
+Re-rodar o build do zip em `public/agente-evolucao.zip` após as mudanças.
 
-Empacotada como `.zip` baixável diretamente do painel (`/configuracoes` → botão "Baixar extensão"). Instalação manual via `chrome://extensions` → modo desenvolvedor → "Carregar sem compactação".
+## Fora de escopo agora
 
-**Arquivos:**
-- `manifest.json` — host_permissions para `https://app.clinicanasnuvens.com.br/*` e para a URL do painel publicado.
-- `popup.html` + `popup.js` — campo para colar a API key (salva em `chrome.storage.local`), botão "Conectar painel", status.
-- `content.js` — injetado nas páginas do Clínica nas Nuvens. Detecta a tela "Atendimentos do dia", adiciona um botão flutuante **"Gerar evolução com IA"** ao lado de cada paciente. Ao clicar:
-  1. Extrai nome + id do paciente do DOM.
-  2. Chama `POST /api/public/extension/generate` no painel.
-  3. Abre o atendimento → tela de evolução terapêutica.
-  4. Localiza o `textarea` da evolução, preenche com o texto retornado e dispara `input` event para o React/Angular do sistema reconhecer.
-  5. Mostra um banner "Revise e clique em salvar" — NÃO clica em salvar sozinho (segurança clínica: você sempre revisa).
-- `background.js` — service worker para roteamento de mensagens e fetch para o painel.
+- Persistir histórico do chat (cada sessão é efêmera).
+- Voz / áudio.
+- Edição inline campo-a-campo dentro do chat (terapeuta edita direto no formulário do Clínica nas Nuvens).
 
-**Seletores:** começamos com os já mapeados no seu `config.py` (`#username`, `#password`, `text=Atendimento`, etc.) e ajustamos após inspeção real — vou pedir prints da interface depois para refinar.
+## Pergunta antes de implementar
 
----
+Confirma 2 pontos:
 
-## Etapa 3 — Fluxo do usuário (você)
+1. **Detecção de campos**: posso assumir que os labels visíveis no formulário (ex: "Como a criança chegou", "Recursos usados", "Dinâmicas usadas") são fixos por modelo de atendimento, ou cada terapeuta tem nomes diferentes? Se forem dinâmicos, a extensão lê os labels da tela em tempo real (já é o plano) — só quero confirmar que está ok a IA gerar baseada nos nomes que encontrar, sem você cadastrar o template antes.
 
-1. Acessa o painel, faz login, cadastra pacientes (perfil + objetivos) — pode importar do `pacientes_db.json` que você já tem.
-2. Vai em "Configurações", copia sua API key, baixa o `.zip` da extensão.
-3. Instala a extensão no Chrome uma única vez, cola a API key no popup.
-4. Abre o Clínica nas Nuvens normalmente, faz login (a extensão NÃO toca em login — usa sua sessão já ativa).
-5. Em "Atendimentos do dia", cada paciente ganha um botão **"Gerar evolução com IA"**. Clica → texto aparece preenchido → você revisa → salva no sistema.
-6. Painel guarda histórico automaticamente, então a próxima evolução já considera as anteriores.
-
----
-
-## Detalhes técnicos
-
-- **Stack:** TanStack Start + Lovable Cloud (Supabase) + Lovable AI Gateway (modelo padrão `google/gemini-3-flash-preview`, configurável).
-- **Prompt:** porto do seu `clinical_engine.py` — mesmas regras (estrutura de descrição, recursos, comportamento, plano, próximos objetivos, sem inventar dados).
-- **Memória curta:** mantém últimas 5 evoluções no contexto, idêntico ao `memory_manager.py`.
-- **Segurança:** RLS por terapeuta; API key da extensão hasheada no banco; CORS restrito; extensão nunca clica em "Salvar".
-- **Empacotamento da extensão:** zipada via `nix run nixpkgs#zip`, servida em `public/agente-evolucao.zip`, baixada via fetch+blob (link direto não funciona no preview do Lovable).
-
----
-
-## Escopo da primeira entrega (MVP)
-
-1. Painel: auth, CRUD de pacientes, histórico, configurações com API key + download do zip.
-2. Endpoint `/api/public/extension/generate` integrado com Lovable AI.
-3. Extensão Chrome funcional: popup + content script que injeta botão e preenche o textarea de evolução.
-4. Importação inicial dos dados do seu `pacientes_db.json`.
-
-Após o MVP, refinamos seletores reais com base em prints da interface do Clínica nas Nuvens (vou te pedir).
-
----
-
-## O que vou precisar de você depois de aprovar o plano
-
-- Habilitar Lovable Cloud (peço na hora certa).
-- Eventualmente, prints/HTML das telas "Atendimentos do dia" e "Evolução terapêutica" para acertar seletores reais.
-
-Aprovando, começo pelo painel + endpoint + estrutura da extensão.
+2. **Comportamento se faltar info**: se o terapeuta escrever pouca coisa no chat (ex: "sessão tranquila, trabalhamos ritmo"), a IA deve (a) preencher tudo extrapolando do histórico e perfil, ou (b) preencher só o que dá pra inferir e deixar os outros vazios pra ele completar?
