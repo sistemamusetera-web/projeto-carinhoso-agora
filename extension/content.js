@@ -340,6 +340,32 @@
       }
     };
     updateConnStatus(cfg);
+
+    const sigBody = panel.querySelector(".evo-sig-body");
+    const renderSig = (t) => {
+      const dataBR = formatDateBR();
+      if (!t || (!t.nome && !t.conselho && !t.especialidade)) {
+        sigBody.innerHTML = `<i style="color:#6b7280">Nenhum dado de terapeuta. <a href="#" class="evo-edit-ther2" style="color:#047857;text-decoration:underline">configurar agora</a></i><br/>📅 ${dataBR}`;
+        const a = sigBody.querySelector(".evo-edit-ther2");
+        if (a) a.onclick = (e) => { e.preventDefault(); openConfigPage(); };
+        return;
+      }
+      sigBody.innerHTML = [
+        t.nome ? `👤 ${escapeHtml(t.nome)}` : "",
+        t.conselho ? `🪪 ${escapeHtml(t.conselho)}` : "",
+        t.especialidade ? `🎯 ${escapeHtml(t.especialidade)}` : "",
+        `📅 ${dataBR}`,
+      ].filter(Boolean).join("<br/>");
+    };
+    chatState.terapeuta = cachedTher;
+    renderSig(cachedTher);
+    const openConfigPage = async () => {
+      const c = await getConfig();
+      const url = (c.panelUrl || "").replace(/\/$/, "");
+      window.open(url ? `${url}/configuracoes` : "about:blank", "_blank");
+    };
+    panel.querySelector(".evo-edit-ther").onclick = (e) => { e.preventDefault(); openConfigPage(); };
+    chatState.renderSig = renderSig;
     panel.querySelector(".evo-chat-save-cfg").onclick = async () => {
       const url = panel.querySelector(".evo-chat-url").value.trim().replace(/\/$/, "");
       const key = panel.querySelector(".evo-chat-key").value.trim();
