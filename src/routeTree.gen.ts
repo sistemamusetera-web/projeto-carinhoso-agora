@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PacientesIdRouteImport } from './routes/pacientes.$id'
+import { Route as ApiPublicExtensionTherapistRouteImport } from './routes/api/public/extension/therapist'
 import { Route as ApiPublicExtensionGenerateRouteImport } from './routes/api/public/extension/generate'
 import { Route as ApiPublicExtensionConfirmRouteImport } from './routes/api/public/extension/confirm'
 import { Route as ApiPublicExtensionChatGenerateRouteImport } from './routes/api/public/extension/chat-generate'
@@ -43,6 +44,12 @@ const PacientesIdRoute = PacientesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => PacientesRoute,
 } as any)
+const ApiPublicExtensionTherapistRoute =
+  ApiPublicExtensionTherapistRouteImport.update({
+    id: '/api/public/extension/therapist',
+    path: '/api/public/extension/therapist',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicExtensionGenerateRoute =
   ApiPublicExtensionGenerateRouteImport.update({
     id: '/api/public/extension/generate',
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
   '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
   '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
+  '/api/public/extension/therapist': typeof ApiPublicExtensionTherapistRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -81,6 +89,7 @@ export interface FileRoutesByTo {
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
   '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
   '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
+  '/api/public/extension/therapist': typeof ApiPublicExtensionTherapistRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -92,6 +101,7 @@ export interface FileRoutesById {
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
   '/api/public/extension/confirm': typeof ApiPublicExtensionConfirmRoute
   '/api/public/extension/generate': typeof ApiPublicExtensionGenerateRoute
+  '/api/public/extension/therapist': typeof ApiPublicExtensionTherapistRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/chat-generate'
     | '/api/public/extension/confirm'
     | '/api/public/extension/generate'
+    | '/api/public/extension/therapist'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/chat-generate'
     | '/api/public/extension/confirm'
     | '/api/public/extension/generate'
+    | '/api/public/extension/therapist'
   id:
     | '__root__'
     | '/'
@@ -124,6 +136,7 @@ export interface FileRouteTypes {
     | '/api/public/extension/chat-generate'
     | '/api/public/extension/confirm'
     | '/api/public/extension/generate'
+    | '/api/public/extension/therapist'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -134,6 +147,7 @@ export interface RootRouteChildren {
   ApiPublicExtensionChatGenerateRoute: typeof ApiPublicExtensionChatGenerateRoute
   ApiPublicExtensionConfirmRoute: typeof ApiPublicExtensionConfirmRoute
   ApiPublicExtensionGenerateRoute: typeof ApiPublicExtensionGenerateRoute
+  ApiPublicExtensionTherapistRoute: typeof ApiPublicExtensionTherapistRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,6 +186,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/pacientes/$id'
       preLoaderRoute: typeof PacientesIdRouteImport
       parentRoute: typeof PacientesRoute
+    }
+    '/api/public/extension/therapist': {
+      id: '/api/public/extension/therapist'
+      path: '/api/public/extension/therapist'
+      fullPath: '/api/public/extension/therapist'
+      preLoaderRoute: typeof ApiPublicExtensionTherapistRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/extension/generate': {
       id: '/api/public/extension/generate'
@@ -217,7 +238,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicExtensionChatGenerateRoute: ApiPublicExtensionChatGenerateRoute,
   ApiPublicExtensionConfirmRoute: ApiPublicExtensionConfirmRoute,
   ApiPublicExtensionGenerateRoute: ApiPublicExtensionGenerateRoute,
+  ApiPublicExtensionTherapistRoute: ApiPublicExtensionTherapistRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
