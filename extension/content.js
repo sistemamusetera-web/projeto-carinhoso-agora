@@ -191,7 +191,7 @@
     for (const raw of texts) {
       const t = cleanLabel(raw);
       if (!t) continue;
-      if (t.length > 80) continue;
+      if (t.length > 160) continue;
       if (IGNORE_LABEL_RX.test(t)) continue;
       if (/^[\d\s\-\/.:]+$/.test(t)) continue;
       return t;
