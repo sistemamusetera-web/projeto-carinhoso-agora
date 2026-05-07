@@ -313,19 +313,66 @@
 
     renderMsgs(panel);
     await runDetection(panel);
+    setupAutoRedetect(panel);
+  }
+
+  function renderFieldsBar(panel) {
+    const fieldsBox = panel.querySelector(".evo-chat-fields");
+    const fields = chatState.fields;
+    if (!fields.length) {
+      fieldsBox.innerHTML = `<b>Nenhum campo detectado.</b> Role a página do atendimento ou clique <a href="#" class="evo-redetect-link" style="color:#4b6b4f;text-decoration:underline">aqui para re-detectar</a>.`;
+    } else {
+      fieldsBox.innerHTML = `<b>${fields.length} campo(s):</b> ${fields.map((f) => escapeHtml(f.nome)).join(" · ")} <a href="#" class="evo-redetect-link" style="color:#4b6b4f;text-decoration:underline;margin-left:6px">↻ atualizar</a>`;
+    }
+    const link = fieldsBox.querySelector(".evo-redetect-link");
+    if (link) link.onclick = (e) => { e.preventDefault(); runDetection(panel); };
   }
 
   async function runDetection(panel) {
     const fieldsBox = panel.querySelector(".evo-chat-fields");
     fieldsBox.innerHTML = "Rolando o formulário para carregar todos os campos…";
     await preScrollEvolutionPanel();
-    const fields = detectFormFields();
-    chatState.fields = fields;
-    if (!fields.length) {
-      fieldsBox.innerHTML = `<b>Nenhum campo detectado.</b> Abra um atendimento com o modelo de evolução, role o formulário e clique em ↻.`;
-    } else {
-      fieldsBox.innerHTML = `<b>${fields.length} campo(s):</b> ${fields.map((f) => escapeHtml(f.nome)).join(" · ")}`;
-    }
+    chatState.fields = detectFormFields();
+    renderFieldsBar(panel);
+  }
+
+  function setupAutoRedetect(panel) {
+    let scheduled = null;
+    const schedule = () => {
+      if (scheduled) clearTimeout(scheduled);
+      scheduled = setTimeout(() => {
+        if (!document.body.contains(panel)) return;
+        const fresh = detectFormFields();
+        const sigOld = chatState.fields.map((f) => f.nome).join("|");
+        const sigNew = fresh.map((f) => f.nome).join("|");
+        if (sigOld !== sigNew) {
+          chatState.fields = fresh;
+          renderFieldsBar(panel);
+        }
+      }, 600);
+    };
+    const obs = new MutationObserver((muts) => {
+      for (const m of muts) {
+        for (const n of m.addedNodes) {
+          if (n.nodeType !== 1) continue;
+          if (n.matches?.("textarea, input") || n.querySelector?.("textarea, input")) {
+            schedule();
+            return;
+          }
+        }
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("scroll", schedule, { passive: true });
+    // limpa quando o painel for removido
+    const cleanup = new MutationObserver(() => {
+      if (!document.body.contains(panel)) {
+        obs.disconnect();
+        window.removeEventListener("scroll", schedule);
+        cleanup.disconnect();
+      }
+    });
+    cleanup.observe(document.body, { childList: true });
   }
 
   function renderMsgs(panel) {
