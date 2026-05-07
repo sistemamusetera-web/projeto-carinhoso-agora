@@ -1,85 +1,48 @@
+## Diagnóstico
 
-## Objetivo
+Pela captura você enviou:
 
-Trocar o fluxo atual ("clicar → IA gera tudo sozinha → cola na textarea") por:
+- O painel mostra **"1 campo(s) detectado(s): Texto"** — ou seja, a extensão **não está reconhecendo** os campos reais do formulário ("Como a criança chegou", "Recursos usados", "Dinâmicas usadas", etc.). Está achando só 1 input e dando o nome errado ("Texto", provavelmente vindo de um placeholder ou heading distante).
+- O botão fica preso em **"Gerando…"**: como só 1 campo foi enviado, a IA até pode responder, mas se o service worker da extensão dorme durante o fetch (>30s) o callback nunca volta, e a UI nunca sai do "Gerando…".
 
-1. Usuário clica em **Gerar evolução com IA** dentro do Clínica nas Nuvens
-2. Abre um **mini-chat lateral** na própria página
-3. Terapeuta digita em linguagem natural as principais demandas, desafios, recursos usados, observações da sessão
-4. IA processa essas notas + perfil + histórico do paciente
-5. IA devolve um **JSON estruturado** com um valor por campo do formulário (Como a criança chegou, Recursos usados, Dinâmicas usadas, Comportamento, etc.)
-6. Extensão preenche **cada campo individualmente** na tela do prontuário
-7. Banner pede revisão antes do terapeuta clicar em **Finalizar atendimento**
+Causas:
 
-## Mudanças
+1. `findLabelFor()` percorre ancestrais de forma frágil — no Clínica nas Nuvens os rótulos ("Como a criança chegou", "Recursos usados"…) ficam em **divs irmãs acima** do `<input>`, não em `<label for=…>`. O fallback acaba pegando textos genéricos ("Texto").
+2. Os campos abaixo da dobra ("Dinâmicas usadas", "Comportamento"…) podem nem estar no DOM ainda enquanto não rola.
+3. O `chrome.runtime.sendMessage` espera o callback do background. Se a chamada à IA demora muito ou o worker é encerrado, a UI fica eternamente em "Gerando…" sem mensagem de erro.
+4. Não há timeout/retry visível para o usuário.
 
-### 1. Extensão Chrome — novo painel de chat (`extension/`)
+## O que vou fazer
 
-- `chat.css` + injeção de um painel lateral fixo (largura ~380px, à direita) quando o usuário clica no botão "Gerar evolução com IA" dentro de um atendimento aberto.
-- Estrutura do painel:
-  - Cabeçalho com nome do paciente detectado
-  - Área de mensagens (estilo chat: terapeuta + assistente)
-  - Campo de texto multi-linha + botão "Enviar"
-  - Botões de ação: **Preencher formulário**, **Refazer**, **Fechar**
-- Estado mantido em memória da página (não persiste entre reloads).
-- Mensagens iniciais do assistente sugerindo o que descrever ("Conte como foi a sessão: como a criança chegou, recursos usados, comportamentos, respostas, próximos passos…").
+### 1. Detecção de campos muito mais robusta (`extension/content.js`)
+- Antes de mapear, **rolar o painel da evolução até o fim** para forçar o React a montar todos os campos, depois voltar para o topo.
+- Trocar `findLabelFor` por uma heurística específica para o Clínica nas Nuvens:
+  - subir a árvore até encontrar um container "card de campo" (div que tem **um único input/textarea** dentro);
+  - dentro desse container, pegar o **primeiro texto curto** (≤ 80 chars) que **não** seja "Obrigatório", asterisco ou o próprio valor;
+  - se nada bater, cair para `<label for>` e por último `placeholder`.
+- Ignorar inputs de busca/menu (largura pequena, dentro de header/sidebar, com placeholder tipo "Pesquisar").
+- Mostrar no painel a lista detectada para você conferir antes de gerar.
 
-### 2. Detecção de campos do formulário (`content.js`)
+### 2. Mensageria confiável entre content script e background
+- Adicionar **timeout de 90 s** no `chrome.runtime.sendMessage`: se passar disso, mostra "A geração demorou demais, tente novamente".
+- Tratar `chrome.runtime.lastError` (worker reciclado): nesse caso, refazer a chamada uma vez automaticamente.
+- No `background.js`, manter o worker vivo durante o fetch usando `chrome.alarms` curto + log explícito de erro de rede.
 
-Hoje preenche só a maior textarea. Precisa mapear os campos visíveis (screenshot 6):
-- Como a criança chegou
-- Recursos usados
-- Dinâmicas usadas
-- (e outros campos do modelo "Evolução terapêutica Musicoterapia")
+### 3. Feedback visual
+- Substituir o estado "Gerando…" por uma barra com etapas: "Enviando observações → Consultando IA → Preenchendo campos".
+- Em caso de erro, mostrar a mensagem real (status HTTP, texto do servidor) dentro do chat, não só no console.
+- Botão **"Re-detectar campos"** no header do painel para rodar a varredura manualmente após você rolar a página.
 
-Estratégia: para cada `<label>`/título de campo visível, achar o input/textarea associado (próximo irmão, ou via `for`/`id`). Construir um array `[{ campoNome, elemento }]` e enviar os nomes dos campos para o backend, para que a IA gere exatamente esses.
+### 4. Endpoint do painel (`/api/public/extension/chat-generate`)
+- Adicionar `AbortController` com timeout de 60 s na chamada ao Lovable AI Gateway, devolvendo erro claro em vez de pendurar a request.
+- Logar no servidor (console) a quantidade de campos recebidos e o tempo da chamada para diagnosticar futuros casos de lentidão.
 
-### 3. Backend — novo endpoint `/api/public/extension/chat-generate`
+### Fora do escopo (não vou mexer agora)
+- Persistência do chat entre sessões.
+- Geração em background com polling (a stack overflow sugere isso, mas a chamada normal cabe bem em <60 s; só faria sentido se a IA estiver consistentemente passando do limite — me avisa se acontecer).
+- Mudar a UI da página de Configurações.
 
-Substitui (ou complementa) o atual `generate.ts`. Recebe:
-```
-{
-  pacienteNome, pacienteIdExterno,
-  mensagens: [{role, content}],   // conversa do chat
-  campos: ["Como a criança chegou", "Recursos usados", ...]
-}
-```
-
-Fluxo no handler:
-1. Autentica via `x-api-key` (igual hoje)
-2. Resolve paciente (igual hoje)
-3. Carrega perfil + objetivos + 5 últimas evoluções
-4. Chama Lovable AI Gateway com **tool calling / structured output**, forçando JSON com chaves = `campos`
-5. Salva uma `evolucao` consolidada (concatenando todos os campos) no banco
-6. Retorna `{ campos: { "Como a criança chegou": "...", "Recursos usados": "...", ... }, evolucaoId }`
-
-System prompt instrui: usar SOMENTE as observações do terapeuta + histórico, não inventar, manter coerência clínica, estilo configurado em `prompt_config`.
-
-### 4. Preenchimento multi-campo (`content.js`)
-
-Após receber a resposta, para cada `{campoNome, elemento}`:
-- Se o nome bate (case-insensitive, normalizado) com uma chave do JSON → `setNativeValue(elemento, valor)` disparando `input`/`change` para o React/Vue do Clínica nas Nuvens reconhecer.
-- Campos sem match ficam vazios (terapeuta vê e completa).
-- Banner: "Campos preenchidos. Revise antes de finalizar."
-
-### 5. Botões extras nas telas (screenshots 4 e 5)
-
-Manter botão "Gerar evolução com IA" também na tela de **Atendimentos do dia** (lista) e no **Prontuário**, mas nessas telas o clique apenas navega/abre o atendimento — o chat só aparece dentro do atendimento aberto (onde os campos existem).
-
-### 6. Repackage do `.zip`
-
-Re-rodar o build do zip em `public/agente-evolucao.zip` após as mudanças.
-
-## Fora de escopo agora
-
-- Persistir histórico do chat (cada sessão é efêmera).
-- Voz / áudio.
-- Edição inline campo-a-campo dentro do chat (terapeuta edita direto no formulário do Clínica nas Nuvens).
-
-## Pergunta antes de implementar
-
-Confirma 2 pontos:
-
-1. **Detecção de campos**: posso assumir que os labels visíveis no formulário (ex: "Como a criança chegou", "Recursos usados", "Dinâmicas usadas") são fixos por modelo de atendimento, ou cada terapeuta tem nomes diferentes? Se forem dinâmicos, a extensão lê os labels da tela em tempo real (já é o plano) — só quero confirmar que está ok a IA gerar baseada nos nomes que encontrar, sem você cadastrar o template antes.
-
-2. **Comportamento se faltar info**: se o terapeuta escrever pouca coisa no chat (ex: "sessão tranquila, trabalhamos ritmo"), a IA deve (a) preencher tudo extrapolando do histórico e perfil, ou (b) preencher só o que dá pra inferir e deixar os outros vazios pra ele completar?
+## Como você vai testar depois
+1. Eu regero o `.zip` v0.2.1; baixe em **Configurações** e recarregue em `chrome://extensions`.
+2. Abra um atendimento e clique no botão flutuante. O painel deve listar **todos** os campos do modelo (não só "Texto").
+3. Se faltar algum campo, role o formulário até o fim e clique em **"Re-detectar campos"** — me mande print da lista para eu ajustar a heurística.
