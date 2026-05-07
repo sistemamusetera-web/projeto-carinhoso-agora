@@ -297,6 +297,7 @@
         </div>
         <div style="display:flex;gap:6px;align-items:center;margin-left:8px">
           <button class="evo-chat-redetect" title="Re-detectar campos">↻</button>
+          <button class="evo-chat-min" title="Minimizar">—</button>
           <button class="evo-chat-close" title="Fechar">×</button>
         </div>
       </div>
@@ -389,6 +390,30 @@
 
     panel.querySelector(".evo-chat-close").onclick = () => panel.remove();
     panel.querySelector(".evo-chat-redetect").onclick = () => runDetection(panel);
+    panel.querySelector(".evo-chat-min").onclick = () => panel.classList.toggle("evo-chat-min");
+
+    // Drag pelo header
+    (function makeDraggable() {
+      const header = panel.querySelector(".evo-chat-header");
+      let sx=0, sy=0, sl=0, st=0, dragging=false;
+      header.addEventListener("mousedown", (e) => {
+        if (e.target.closest("button, input, a")) return;
+        dragging = true;
+        const r = panel.getBoundingClientRect();
+        sl = r.left; st = r.top; sx = e.clientX; sy = e.clientY;
+        panel.style.right = "auto";
+        panel.style.left = sl + "px";
+        panel.style.top = st + "px";
+        e.preventDefault();
+      });
+      window.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        panel.style.left = (sl + e.clientX - sx) + "px";
+        panel.style.top = Math.max(0, st + e.clientY - sy) + "px";
+      });
+      window.addEventListener("mouseup", () => { dragging = false; });
+    })();
+
     panel.querySelector(".evo-clear").onclick = () => {
       chatState.messages = chatState.messages.slice(0, 1);
       renderMsgs(panel);
