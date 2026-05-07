@@ -1,0 +1,45 @@
+.evo-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin-left: 6px;
+  background: #4b6b4f;
+  color: #ffffff !important;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: -apple-system, system-ui, sans-serif;
+}
+.evo-ai-btn:hover { background: #3d5841; }
+.evo-ai-btn[disabled] { opacity: 0.6; cursor: wait; }
+
+.evo-ai-banner {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999999;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-left: 4px solid #4b6b4f;
+  border-radius: 8px;
+  padding: 14px 16px;
+  max-width: 360px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  font-family: -apple-system, system-ui, sans-serif;
+  font-size: 13px;
+  color: #1f2937;
+}
+.evo-ai-banner strong { display: block; margin-bottom: 4px; color: #4b6b4f; }
+.evo-ai-banner button {
+  margin-top: 10px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: #4b6b4f;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+}

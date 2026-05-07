@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Agente de Evolução</title>
+    <style>
+      body { font-family: -apple-system, system-ui, sans-serif; width: 320px; padding: 16px; margin: 0; color: #1f2937; }
+      h1 { font-size: 15px; margin: 0 0 12px; }
+      label { display: block; font-size: 12px; color: #4b5563; margin: 10px 0 4px; }
+      input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+      button { width: 100%; margin-top: 12px; padding: 9px; border: 0; border-radius: 6px; background: #4b6b4f; color: white; font-weight: 600; cursor: pointer; font-size: 13px; }
+      button:hover { background: #3d5841; }
+      .status { margin-top: 10px; font-size: 12px; }
+      .ok { color: #16a34a; }
+      .err { color: #dc2626; }
+      .hint { font-size: 11px; color: #6b7280; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>Agente de Evolução Terapêutica</h1>
+    <label>URL do painel</label>
+    <input id="panelUrl" placeholder="https://seu-projeto.lovable.app" />
+    <label>API Key</label>
+    <input id="apiKey" type="password" placeholder="evo_..." />
+    <button id="save">Salvar e conectar</button>
+    <div id="status" class="status"></div>
+    <div class="hint">Abra o Clínica nas Nuvens; ao lado de cada paciente aparecerá um botão "Gerar evolução com IA".</div>
+    <script src="popup.js"></script>
+  </body>
+</html>
