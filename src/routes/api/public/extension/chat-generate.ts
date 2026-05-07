@@ -160,19 +160,34 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
           const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
           if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY ausente" }, 500);
 
-          const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: modelo,
-              messages,
-              tools,
-              tool_choice: { type: "function", function: { name: "preencher_evolucao" } },
-            }),
-          });
+          console.log(`[chat-generate] paciente=${paciente.nome} campos=${campos.length} modelo=${modelo}`);
+          const t0 = Date.now();
+
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 60000);
+          let aiResp: Response;
+          try {
+            aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: modelo,
+                messages,
+                tools,
+                tool_choice: { type: "function", function: { name: "preencher_evolucao" } },
+              }),
+              signal: ctrl.signal,
+            });
+          } catch (e: any) {
+            clearTimeout(timer);
+            if (e?.name === "AbortError") return json({ error: "IA demorou demais (>60s). Tente novamente." }, 504);
+            return json({ error: `Falha ao chamar IA: ${e?.message ?? e}` }, 500);
+          }
+          clearTimeout(timer);
+          console.log(`[chat-generate] AI respondeu em ${Date.now() - t0}ms status=${aiResp.status}`);
 
           if (!aiResp.ok) {
             const text = await aiResp.text();
