@@ -198,11 +198,11 @@
     panel.className = "evo-chat";
     panel.innerHTML = `
       <div class="evo-chat-header">
-        <div>
+        <div style="flex:1;min-width:0">
           <strong>Agente de Evolução</strong>
-          <small>${paciente.nome ? escapeHtml(paciente.nome) : "Paciente não detectado"}</small>
+          <input class="evo-chat-paciente" placeholder="Nome do paciente" value="${escapeHtml(paciente.nome || "")}" style="display:block;width:100%;margin-top:4px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px" />
         </div>
-        <div style="display:flex;gap:6px;align-items:center">
+        <div style="display:flex;gap:6px;align-items:center;margin-left:8px">
           <button class="evo-chat-redetect" title="Re-detectar campos">↻</button>
           <button class="evo-chat-close" title="Fechar">×</button>
         </div>
