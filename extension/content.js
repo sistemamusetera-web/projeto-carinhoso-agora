@@ -157,7 +157,7 @@
       while (sib) {
         const t = (sib.innerText || sib.textContent || "").trim().split("\n")[0].trim();
         const cleaned = cleanLabel(t);
-        if (cleaned && cleaned.length <= 80 && !IGNORE_LABEL_RX.test(cleaned) && !/^[\d\s\-\/.:]+$/.test(cleaned)) {
+        if (cleaned && cleaned.length <= 160 && !IGNORE_LABEL_RX.test(cleaned) && !/^[\d\s\-\/.:]+$/.test(cleaned)) {
           return cleaned;
         }
         sib = sib.previousElementSibling;
