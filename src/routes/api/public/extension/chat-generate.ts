@@ -106,16 +106,19 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
           const baseSys =
             cfg?.system_prompt ??
             "Você é um assistente terapêutico especializado em evoluções clínicas.";
-          const modelo = cfg?.modelo ?? "google/gemini-2.5-flash";
+          const modelo = cfg?.modelo ?? "google/gemini-2.5-pro";
           const estilo = paciente.estilo || cfg?.estilo_padrao || "descritivo";
 
           const sys = `${baseSys}
 
-REGRAS CRÍTICAS:
-- Use SOMENTE as observações que o terapeuta enviou nesta conversa, combinadas com o perfil/objetivos/histórico do paciente.
-- NÃO invente fatos clínicos que o terapeuta não mencionou.
-- Se faltar informação para um campo, escreva uma frase clínica curta e neutra, ou indique brevemente "Sem registros adicionais para esta sessão."
-- Mantenha coerência com sessões anteriores. Evite repetir literalmente trechos do histórico.
+MODO EXPANSÃO INTELIGENTE:
+- O terapeuta normalmente envia notas curtas, telegráficas ou tópicos rápidos.
+- Sua tarefa é EXPANDIR essas notas em texto clínico profissional, rico e bem desenvolvido para CADA campo do formulário.
+- Use o perfil, objetivos e histórico do paciente para inferir desdobramentos plausíveis e coerentes (linguagem, postura terapêutica, recursos típicos da abordagem).
+- NUNCA invente fatos clínicos novos que mudem a história do paciente: nada de novos diagnósticos, medicações, eventos familiares, datas ou pessoas que não foram mencionadas.
+- Para CADA campo do formulário, sempre produza conteúdo substantivo (3 a 8 frases, conforme o campo). Só use uma observação neutra do tipo "Sem intercorrências relevantes nesta sessão." quando realmente não houver nenhuma base para inferir.
+- Mantenha coerência cruzada: descrição da sessão ↔ recursos ↔ comportamento ↔ respostas ↔ plano ↔ próximos objetivos devem contar a MESMA história.
+- Evite repetir literalmente trechos do histórico; reescreva.
 - Estilo: ${estilo}.
 - Você DEVE responder usando a função "preencher_evolucao" com EXATAMENTE estas chaves: ${campos.map((c) => JSON.stringify(c)).join(", ")}.
 - Cada valor deve ser um texto clínico profissional, direto, sem títulos repetindo o nome do campo.
@@ -178,6 +181,8 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
                 messages,
                 tools,
                 tool_choice: { type: "function", function: { name: "preencher_evolucao" } },
+                temperature: 0.6,
+                max_tokens: 4000,
               }),
               signal: ctrl.signal,
             });
@@ -243,6 +248,11 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
             evolucaoId: evo?.id,
             pacienteId: paciente.id,
             pacienteNome: paciente.nome,
+            terapeuta: {
+              nome: cfg?.terapeuta_nome ?? "",
+              conselho: cfg?.terapeuta_conselho ?? "",
+              especialidade: cfg?.terapeuta_especialidade ?? "",
+            },
           });
         } catch (e) {
           console.error(e);

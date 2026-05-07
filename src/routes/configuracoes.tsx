@@ -57,6 +57,9 @@ function ConfigPage() {
         system_prompt: promptForm.system_prompt,
         modelo: promptForm.modelo,
         estilo_padrao: promptForm.estilo_padrao,
+        terapeuta_nome: promptForm.terapeuta_nome ?? "",
+        terapeuta_conselho: promptForm.terapeuta_conselho ?? "",
+        terapeuta_especialidade: promptForm.terapeuta_especialidade ?? "",
       }).eq("user_id", user!.id);
       if (error) throw error;
     },
@@ -166,6 +169,30 @@ function ConfigPage() {
             ))}
           </div>
         </Card>
+
+        {c && (
+          <Card className="p-6">
+            <h2 className="font-display text-xl font-semibold">Dados do terapeuta</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Preenchidos automaticamente em todas as evoluções pela extensão.</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              <div className="space-y-2"><Label>Nome</Label>
+                <Input value={c.terapeuta_nome ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_nome: e.target.value })} />
+              </div>
+              <div className="space-y-2"><Label>Conselho / CPF</Label>
+                <Input placeholder="Ex.: CRP 06/12345" value={c.terapeuta_conselho ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_conselho: e.target.value })} />
+              </div>
+              <div className="space-y-2"><Label>Especialidade</Label>
+                <Input value={c.terapeuta_especialidade ?? ""} onChange={(e) => setPromptForm({ ...c, terapeuta_especialidade: e.target.value })} />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" disabled={!promptForm} onClick={() => setPromptForm(null)}>Cancelar</Button>
+              <Button disabled={!promptForm || savePrompt.isPending} onClick={() => savePrompt.mutate()} className="gap-1.5">
+                <Save className="h-4 w-4" /> Salvar
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {c && (
           <Card className="p-6">

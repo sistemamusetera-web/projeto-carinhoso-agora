@@ -488,15 +488,46 @@
       return;
     }
     const camposResp = resp.data?.campos || {};
+    const terapeuta = resp.data?.terapeuta || {};
+    const filledTher = fillTherapistFields(terapeuta);
     const filled = fillFields(camposResp);
+    const therMsg = filledTher ? ` (+${filledTher} dado(s) do terapeuta)` : "";
     chatState.messages.push({
       role: "assistant",
       content:
-        `Preenchi ${filled} de ${chatState.fields.length} campo(s).\n\n` +
+        `Preenchi ${filled} de ${chatState.fields.length} campo(s)${therMsg}.\n\n` +
         Object.entries(camposResp).map(([k, v]) => `▸ ${k}\n${v}`).join("\n\n") +
         `\n\nRevise antes de finalizar. Para ajustar, descreva o que mudar e clique novamente.`,
     });
     renderMsgs(panel);
+  }
+
+  function fillTherapistFields(t) {
+    if (!t || (!t.nome && !t.conselho && !t.especialidade)) return 0;
+    const map = [
+      { val: t.nome, rx: /(terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente)/i },
+      { val: t.conselho, rx: /(conselho|crp|crm|cpf|registro|n[uú]mero do conselho)/i },
+      { val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
+    ];
+    // detecta TODOS os campos visíveis (não só textareas)
+    const allFields = detectFormFields();
+    let n = 0;
+    const used = new Set();
+    for (const m of map) {
+      if (!m.val) continue;
+      for (const f of allFields) {
+        if (used.has(f.el)) continue;
+        if (m.rx.test(f.nome)) {
+          try {
+            setNativeValue(f.el, m.val);
+            used.add(f.el);
+            n++;
+          } catch (e) { /* ignore */ }
+          break;
+        }
+      }
+    }
+    return n;
   }
 
   function fillFields(camposResp) {

@@ -1,92 +1,51 @@
-## Problema
+## Objetivo
 
-No print, o chat está conectado e detectou o paciente, mas mostra **"Nenhum campo detectado"**. Os textareas da evolução existem na mesma tela do Atendimento, porém só aparecem rolando para baixo — fora da viewport inicial.
+Tornar o agente mais "inteligente" (preenche todos os campos a partir de poucas informações) e adicionar dados do terapeuta que são preenchidos automaticamente em todo formulário.
 
-A função atual `preScrollEvolutionPanel()` procura um container scrollável **interno** com a palavra "Obrigatório". Na tela do Clínica nas Nuvens, o scroll acontece na própria janela (não num div interno), então o pre-scroll não dispara e a detecção roda só com o que está acima da dobra.
+## 1. Dados do terapeuta (nova configuração)
 
-Além disso, o filtro atual descarta:
-- Inputs com largura `< 220px` que tenham placeholder de busca (correto)
-- Mas também perde alguns textareas/inputs cujo "label do card" está em outro nível da árvore não coberto pelas 8 camadas exploradas
+**Banco** — adicionar colunas em `prompt_config`:
+- `terapeuta_nome` (text, default '')
+- `terapeuta_conselho` (text, default '') — ex.: "CRP 06/12345"
+- `terapeuta_especialidade` (text, default '')
+- `terapeuta_extras` (jsonb, default '{}') — pares chave/valor livres (ex.: telefone, e-mail) para mapear em qualquer campo extra que apareça no formulário
 
-## Solução
+**Tela `/configuracoes`** — novo card "Dados do terapeuta" acima de "Prompt e modelo", com inputs para nome, conselho/CPF e especialidade, salvando no mesmo `prompt_config` (mesmo botão Salvar).
 
-### 1. Pre-scroll robusto (extension/content.js)
-Substituir `preScrollEvolutionPanel()` por uma rotina que:
-- Detecta TODOS os candidatos scrolláveis (incluindo `document.scrollingElement` e `window`)
-- Faz scroll completo da janela de cima até o fim e volta ao topo
-- Também rola qualquer container interno scrollável encontrado
-- Aguarda lazy-render entre passos (~120ms)
+## 2. Preenchimento automático dos dados do terapeuta
 
-### 2. Auto re-detecção (extension/content.js)
-Adicionar um `MutationObserver` dentro do painel do chat que:
-- Observa adições de `<textarea>` e `<input>` no DOM
-- Quando o número de campos visíveis muda, re-roda `detectFormFields()` automaticamente (debounced 600ms)
-- Atualiza a barra `.evo-chat-fields` sem precisar clicar em ↻
-- Também re-detecta em eventos de `scroll` da janela (debounced)
+O endpoint `chat-generate` passa a retornar, junto dos `campos` gerados pela IA, um objeto `terapeuta` com os dados salvos na config.
 
-### 3. Detecção mais permissiva (extension/content.js)
-Em `detectFormFields()`:
-- Incluir todos `<textarea>` visíveis e habilitados, sem filtro de largura
-- Para `<input type=text>`: só descartar se placeholder casar EXATAMENTE com "pesquisar/buscar/filtrar/selecione" E largura < 220px (manter regra atual)
-- Aumentar a profundidade de busca de label de 8 para 12 níveis
-- Como fallback final, usar o texto imediatamente anterior ao input no DOM (previousElementSibling chain) se nenhum label for encontrado
-- Mostrar contagem mais clara: "X campo(s) detectado(s) — role a página se faltar algum"
+A extensão (`content.js`), ao receber a resposta, antes de aplicar os textos da IA:
+- Detecta campos do terapeuta no formulário por heurística de label (regex em PT-BR):
+  - nome → "terapeuta", "profissional", "responsável"
+  - conselho → "conselho", "crp", "crm", "cpf", "registro"
+  - especialidade → "especialidade", "área"
+- Para cada match, faz `setNativeValue` com o valor da config (sem chamar a IA).
+- Em seguida aplica normalmente os campos clínicos vindos da IA aos demais textareas.
 
-### 4. Botão "Detectar agora" mais visível
-A barra `.evo-chat-fields` ganha um link "↻ atualizar" inline para forçar re-scan rápido sem ter que mirar no botão pequeno do header.
+Assim, todo `Gerar e preencher` deixa os dados do terapeuta prontos.
 
-### 5. Versão e empacotamento
-- Bump `manifest.json` → `0.2.5`
-- Reempacotar `public/agente-evolucao.zip`
+## 3. IA mais "inteligente" com pouca entrada
 
-## Detalhes técnicos
+No `chat-generate` (server route), reforçar o `system prompt` para o modo "expansão inteligente":
 
-```js
-// Novo pre-scroll
-async function preScrollEvolutionPanel() {
-  const scroller = document.scrollingElement || document.documentElement;
-  const max = scroller.scrollHeight;
-  const step = Math.max(300, window.innerHeight - 80);
-  for (let y = 0; y <= max; y += step) {
-    scroller.scrollTo({ top: y, behavior: "instant" });
-    await new Promise(r => setTimeout(r, 120));
-  }
-  // rola containers internos também
-  const inner = Array.from(document.querySelectorAll("div,main,section"))
-    .filter(d => isVisible(d) && d.scrollHeight > d.clientHeight + 100);
-  for (const c of inner) {
-    c.scrollTop = c.scrollHeight;
-    await new Promise(r => setTimeout(r, 80));
-    c.scrollTop = 0;
-  }
-  scroller.scrollTo({ top: 0, behavior: "instant" });
-  await new Promise(r => setTimeout(r, 150));
-}
+- Instruir explicitamente: "A partir de notas curtas/telegráficas do terapeuta, EXPANDA com linguagem clínica profissional, inferindo desdobramentos plausíveis e coerentes com o perfil/objetivos/histórico do paciente — sem inventar fatos clínicos novos (diagnósticos, medicações, eventos não citados)."
+- Para cada campo do formulário, sempre produzir conteúdo substantivo (nunca "Sem registros…") quando houver qualquer informação aproveitável; só usar placeholder neutro se realmente não houver base.
+- Manter coerência cruzada entre os campos (descrição ↔ recursos ↔ comportamento ↔ próximos objetivos).
+- Subir o `max_tokens` da chamada e usar `temperature: 0.6` para texto mais rico, mas previsível.
+- Trocar o modelo padrão (quando o usuário não definiu) para `google/gemini-2.5-pro` (mais detalhe), mantendo override pela config.
 
-// Auto re-detecção dentro de openChat()
-const fieldObserver = new MutationObserver(() => {
-  clearTimeout(panel.__redetect);
-  panel.__redetect = setTimeout(() => {
-    const fresh = detectFormFields();
-    if (fresh.length !== chatState.fields.length) {
-      chatState.fields = fresh;
-      renderFieldsBar(panel);
-    }
-  }, 600);
-});
-fieldObserver.observe(document.body, { childList: true, subtree: true });
-window.addEventListener("scroll", debouncedRedetect, { passive: true });
-```
+A chamada continua usando tool-calling para garantir o JSON com as chaves exatas dos campos detectados — nada muda no contrato com a extensão.
 
-## Arquivos alterados
+## 4. Versão da extensão
 
-- `extension/content.js` — pre-scroll, auto re-detecção, filtro mais permissivo
-- `extension/manifest.json` — versão 0.2.5
-- `public/agente-evolucao.zip` — reempacotamento
+`extension/manifest.json` → `0.2.7` e re-empacotar `public/agente-evolucao.zip`.
 
-## Como testar
+## Arquivos afetados
 
-1. Baixar o novo .zip em **Configurações** → recarregar em `chrome://extensions`
-2. Abrir o atendimento do paciente
-3. Abrir o chat (ícone da extensão) — sem rolar manualmente, ele deve listar os campos
-4. Se faltar algum, rolar a página: a contagem se atualiza sozinha
+- migration SQL: novas colunas em `prompt_config`
+- `src/routes/configuracoes.tsx` — card "Dados do terapeuta" + estado/save
+- `src/routes/api/public/extension/chat-generate.ts` — system prompt + retorno `terapeuta`
+- `extension/content.js` — preenchimento dos campos do terapeuta
+- `extension/manifest.json` + `public/agente-evolucao.zip`

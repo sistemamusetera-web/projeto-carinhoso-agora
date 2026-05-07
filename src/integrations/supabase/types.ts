@@ -126,6 +126,9 @@ export type Database = {
           estilo_padrao: string
           modelo: string
           system_prompt: string
+          terapeuta_conselho: string
+          terapeuta_especialidade: string
+          terapeuta_nome: string
           updated_at: string
           user_id: string
         }
@@ -133,6 +136,9 @@ export type Database = {
           estilo_padrao?: string
           modelo?: string
           system_prompt?: string
+          terapeuta_conselho?: string
+          terapeuta_especialidade?: string
+          terapeuta_nome?: string
           updated_at?: string
           user_id: string
         }
@@ -140,6 +146,9 @@ export type Database = {
           estilo_padrao?: string
           modelo?: string
           system_prompt?: string
+          terapeuta_conselho?: string
+          terapeuta_especialidade?: string
+          terapeuta_nome?: string
           updated_at?: string
           user_id?: string
         }
