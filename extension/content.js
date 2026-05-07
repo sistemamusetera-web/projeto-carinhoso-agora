@@ -314,6 +314,14 @@
   }
 
   async function generateAndFill(panel, sendBtn) {
+    const inputNome = panel.querySelector(".evo-chat-paciente");
+    const nomeManual = inputNome ? inputNome.value.trim() : "";
+    if (nomeManual) chatState.pacienteNome = nomeManual;
+    if (!chatState.pacienteNome) {
+      pushSystemMsg(panel, "Informe o nome do paciente no campo acima antes de gerar.");
+      if (inputNome) inputNome.focus();
+      return;
+    }
     if (!chatState.fields.length) {
       pushSystemMsg(panel, "Nenhum campo detectado para preencher. Abra a tela do atendimento e clique em ↻.");
       return;
