@@ -8,14 +8,14 @@
   // Templates rápidos — o usuário só clica nos chips e a IA expande para texto clínico
   const TEMPLATES = [
     {
-      grupo: "Comunicação",
+      grupo: "Comunicação", icone: "💬", key: "comunicacao",
       itens: [
         { label: "Paciente verbal", frase: "Paciente apresentou-se de forma verbal, comunicando-se por meio de fala funcional durante a sessão." },
         { label: "Paciente não-verbal", frase: "Paciente não-verbal, comunicando-se por meio de gestos, expressões faciais e vocalizações." },
       ],
     },
     {
-      grupo: "Chegada",
+      grupo: "Chegada", icone: "🚪", key: "chegada",
       itens: [
         { label: "Chegou tranquilo", frase: "Chegou ao atendimento de forma tranquila, calmo e receptivo ao acolhimento inicial." },
         { label: "Chegou agitado", frase: "Chegou ao atendimento agitado, demonstrando inquietação motora e dificuldade inicial de regulação." },
@@ -23,14 +23,14 @@
       ],
     },
     {
-      grupo: "Abordagem",
+      grupo: "Abordagem", icone: "🎯", key: "abordagem",
       itens: [
         { label: "Abordagem ativa", frase: "Foi conduzida abordagem terapêutica ativa, com proposição direta de atividades estruturadas pela terapeuta." },
         { label: "Abordagem receptiva", frase: "Foi conduzida abordagem terapêutica receptiva, acolhendo as iniciativas e produções espontâneas do paciente." },
       ],
     },
     {
-      grupo: "Interação",
+      grupo: "Interação", icone: "🤝", key: "interacao",
       itens: [
         { label: "Boa interação", frase: "Estabeleceu boa interação com a terapeuta, mantendo contato visual e respondendo às propostas de forma engajada." },
         { label: "Interação moderada", frase: "Apresentou interação moderada, alternando momentos de engajamento com períodos de retraimento." },
@@ -38,7 +38,7 @@
       ],
     },
     {
-      grupo: "Participação",
+      grupo: "Participação", icone: "🎵", key: "participacao",
       itens: [
         { label: "Boa participação", frase: "Demonstrou boa participação nas atividades propostas, envolvendo-se de forma colaborativa do início ao fim." },
         { label: "Resistência a propostas", frase: "Apresentou resistência a algumas propostas, sendo necessário ajustar o ritmo e oferecer alternativas." },
@@ -46,7 +46,7 @@
       ],
     },
     {
-      grupo: "Saída",
+      grupo: "Saída", icone: "👋", key: "saida",
       itens: [
         { label: "Saiu tranquilo", frase: "Encerrou a sessão de forma tranquila, regulado e organizado para a transição." },
         { label: "Saiu agitado", frase: "Encerrou a sessão ainda agitado, necessitando apoio para a transição para o ambiente externo." },
