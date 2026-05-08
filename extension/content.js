@@ -365,13 +365,13 @@
         <input class="evo-chat-key" type="password" placeholder="API Key (evo_...)" value="${escapeHtml(cfg.apiKey || "")}" style="width:100%;box-sizing:border-box;padding:5px 7px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" />
         <button class="evo-chat-save-cfg" style="padding:5px;border:0;border-radius:4px;background:#374151;color:white;font-size:11px;font-weight:600;cursor:pointer">Salvar conexão</button>
       </div>
-      <div class="evo-chat-signature" style="padding:8px 12px;background:#ecfdf5;border-bottom:1px solid #d1fae5;font-size:11px;color:#065f46">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <span style="font-weight:600">✍️ Assinatura</span>
-          <a href="#" class="evo-edit-ther" style="font-size:10px;color:#047857;text-decoration:underline">editar</a>
-        </div>
+      <details class="evo-chat-signature">
+        <summary>
+          <span class="evo-sig-summary"><span class="evo-sig-icon">✍️</span><span class="evo-sig-label">Assinatura</span></span>
+          <a href="#" class="evo-edit-ther">editar</a>
+        </summary>
         <div class="evo-sig-body"></div>
-      </div>
+      </details>
       <div class="evo-chat-fields">Detectando campos…</div>
       <div class="evo-chat-status" style="display:none"></div>
       <div class="evo-chat-msgs"></div>
