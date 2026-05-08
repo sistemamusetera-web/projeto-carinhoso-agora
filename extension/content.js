@@ -377,15 +377,15 @@
       <div class="evo-chat-msgs"></div>
       <div class="evo-chat-templates">
         <div class="evo-tpl-head">
-          <span>⚡ Templates rápidos</span>
+          <span class="evo-tpl-head-title"><span class="evo-tpl-badge">⚡</span> Templates rápidos <span class="evo-tpl-count"></span></span>
           <a href="#" class="evo-tpl-clear">limpar</a>
         </div>
         <div class="evo-tpl-list">
           ${TEMPLATES.map((g) => `
-            <div class="evo-tpl-group">
-              <div class="evo-tpl-group-title">${escapeHtml(g.grupo)}</div>
+            <div class="evo-tpl-group" data-grupo="${g.key}">
+              <div class="evo-tpl-group-title"><span class="evo-tpl-group-icon">${g.icone}</span>${escapeHtml(g.grupo)}</div>
               <div class="evo-tpl-chips">
-                ${g.itens.map((it) => `<button type="button" class="evo-tpl-chip" data-frase="${escapeHtml(it.frase)}">${escapeHtml(it.label)}</button>`).join("")}
+                ${g.itens.map((it) => `<button type="button" class="evo-tpl-chip" data-grupo="${g.key}" data-frase="${escapeHtml(it.frase)}">${escapeHtml(it.label)}</button>`).join("")}
               </div>
             </div>
           `).join("")}
@@ -395,7 +395,7 @@
         <textarea placeholder="Opcional: adicione observações específicas (medicações, intercorrências, etc.)"></textarea>
         <div class="evo-chat-actions">
           <button class="evo-btn-secondary evo-clear">Limpar</button>
-          <button class="evo-btn-primary evo-send">Gerar e preencher</button>
+          <button class="evo-btn-primary evo-send"><span class="evo-send-icon">✨</span> <span class="evo-send-label">Gerar e preencher</span></button>
         </div>
       </div>
     `;
