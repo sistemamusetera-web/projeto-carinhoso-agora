@@ -1,61 +1,84 @@
-## Templates rápidos no painel da extensão
+## Melhorar layout e responsividade da extensão
 
-Adicionar uma barra de "templates" (chips clicáveis) dentro do painel flutuante da extensão. O usuário só clica nos templates desejados (pode escolher vários) e em "Gerar e preencher" — o texto consolidado vira a observação enviada à IA, que então preenche o formulário.
+A extensão funciona bem, mas o painel flutuante está visualmente apertado, com seções "empilhadas" (Conexão, Assinatura, Campos, Templates, Input) competindo por espaço — especialmente em viewports menores. Os templates estão como chips simples de borda cinza, sem identidade visual.
 
-### Templates inclusos (editáveis no código)
+### Objetivos
 
-Organizados em grupos para facilitar a escolha:
+1. Painel mais elegante, com hierarquia visual clara e identidade verde "musicoterapia" mais forte.
+2. Templates rápidos virando o destaque visual: chips coloridos por categoria, com ícones, hover/active mais ricos.
+3. Responsividade real: funciona em telas pequenas (≤480px) sem cortar conteúdo.
+4. Reorganização para reduzir scroll e poluição.
 
-**Comunicação**
-- Paciente verbal
-- Paciente não-verbal
+### Mudanças de layout no painel (`extension/content.js` + `content.css`)
 
-**Chegada**
-- Chegou tranquilo
-- Chegou agitado
-- Chegou sonolento
+**Header**
+- Mantém verde, mas com gradiente sutil (`#4b6b4f → #3d5841`) e sombra interna.
+- Input do nome do paciente com fundo translúcido branco e ícone 👤.
+- Botões `↻ — ×` viram ícones circulares com hover destacado.
 
-**Abordagem**
-- Abordagem ativa
-- Abordagem receptiva
+**Seção Conexão** → vira **colapsável** (fechada por padrão quando já conectado).
+- Quando conectado: mostra apenas uma linha fina verde "✓ Conectado a projeto-...lovable.app" com link "editar".
+- Quando não configurado: abre automaticamente.
+- Reduz drasticamente o espaço vertical no caso comum.
 
-**Interação**
-- Boa interação
-- Interação moderada
-- Baixa interação
+**Seção Assinatura**
+- Card verde claro com borda lateral verde-escura (4px).
+- Layout em duas colunas quando largura ≥360px (nome+conselho à esquerda, especialidade+data à direita); empilha em telas menores.
+- Ícones SVG inline (não emoji) mais consistentes.
 
-**Participação / Resposta**
-- Boa participação nas atividades
-- Resistência a algumas propostas
-- Respondeu bem aos recursos musicais
+**Seção Campos detectados**
+- Vira um chip único minimalista: "📋 16 campos detectados ▾" — clicável para expandir/colapsar a lista.
+- Reduz ruído visual quando o usuário não precisa ver a lista.
 
-**Saída**
-- Saiu tranquilo
-- Saiu agitado
-- Saiu sorridente / regulado
+**Templates rápidos (foco principal do redesign)**
+- Header da seção com ícone ⚡ em badge circular verde, título "Templates rápidos" e contador `(3 selecionados)` quando há seleção.
+- Cada grupo recebe uma cor de acento própria e ícone:
+  - Comunicação 💬 (azul suave)
+  - Chegada 🚪 (âmbar)
+  - Abordagem 🎯 (roxo)
+  - Interação 🤝 (verde-água)
+  - Participação 🎵 (rosa)
+  - Saída 👋 (cinza-azul)
+- Chips redesenhados:
+  - Pílulas com fundo branco, borda 1.5px na cor do grupo, texto na cor do grupo.
+  - Estado `active`: preenchidos com a cor do grupo, texto branco, leve scale (1.02) e sombra colorida.
+  - Hover: fundo tinted (10% da cor do grupo) e leve translateY(-1px).
+  - Transições suaves (150ms ease).
+- Group title fica inline com uma linha divisória sutil à direita (estilo seção de revista).
+- Layout em grid responsivo: chips fluem naturalmente; em telas estreitas ocupam largura total mantendo legibilidade.
 
-Cada chip tem um `label` curto (mostrado no botão) e um `frase` completa em texto clínico (ex.: "Paciente apresentou-se de forma verbal, comunicando-se com frases curtas e funcionais durante a sessão.") que é o que efetivamente é enviado à IA.
+**Input + ações**
+- Textarea com placeholder mais convidativo e altura inicial menor (50px) — cresce conforme digita.
+- Botão "Gerar e preencher" com gradiente verde, ícone ✨ e leve animação no hover.
+- Botão "Limpar" mais discreto (ghost).
+- Quando há templates selecionados, o botão primário muda para "✨ Gerar com N template(s)".
 
-### Como funciona na UI
+### Responsividade
 
-1. Logo acima do `<textarea>` de "Descreva a sessão de hoje…", aparece a seção **"Templates rápidos"** com os chips agrupados por categoria.
-2. Clicar num chip alterna selecionado/deselecionado (visual destacado).
-3. Um botão **"Limpar templates"** desmarca todos.
-4. Ao clicar em **"Gerar e preencher"**:
-   - As frases dos chips selecionados são concatenadas (uma por linha) e prefixadas com "Observações da sessão:".
-   - Se o usuário também escreveu algo no textarea, esse texto é anexado depois.
-   - O resultado vira a mensagem `user` enviada para a IA (mesmo fluxo atual de `generateAndFill`), que continua expandindo em texto clínico para cada campo do formulário.
-5. Após gerar, os chips são desmarcados automaticamente.
+- Painel: largura `min(380px, calc(100vw - 24px))`, altura `min(640px, calc(100vh - 100px))`.
+- Em viewport ≤480px (mobile): painel ocupa quase a tela toda, posicionado bottom-sheet (full width, bordas arredondadas só em cima).
+- Todas as seções com `overflow` controlado e `min-width: 0` para evitar cortes.
+- Templates: container com `max-height` proporcional (não fixo 180px) — usa `clamp(140px, 30vh, 240px)`.
+- Inputs e chips com `font-size: 13px` (mobile mantém ≥12px para evitar zoom no iOS).
 
-### Mudanças técnicas
+### Polimento visual geral
 
-- **`extension/content.js`**:
-  - Nova constante `TEMPLATES` (lista de grupos com `{ label, frase }`).
-  - Renderizar a barra de chips dentro do `openChat()` (acima do textarea).
-  - Estado `chatState.selectedTemplates: Set<string>` para controlar seleção.
-  - Em `send()` / `generateAndFill()`: se houver templates selecionados, montar mensagem combinada antes de enviar.
-- **`extension/content.css`**: estilos para `.evo-tpl-group`, `.evo-tpl-chip`, `.evo-tpl-chip.active`.
-- **`extension/manifest.json`**: bump para **0.8.0**.
-- **`public/agente-evolucao.zip`**: repackage.
+- Tipografia: melhor escala (header 14px, títulos de seção 11px uppercase, corpo 13px).
+- Bordas arredondadas consistentes (8px nos cards, 999px nos chips, 6px nos inputs).
+- Sombras em camadas (não só `box-shadow` plano).
+- Scrollbars custom (slim, verde-claro) no painel e na lista de templates.
+- Estados de foco acessíveis (outline verde) em todos botões/inputs.
 
-Sem mudanças no backend / endpoints — a IA continua recebendo texto livre e preenchendo o formulário como hoje.
+### Arquivos afetados
+
+- `extension/content.css` — reescrita ampla das classes existentes + novas classes (`.evo-tpl-group--comunicacao`, etc.) usando CSS custom properties por grupo.
+- `extension/content.js` — pequenos ajustes:
+  - Adicionar `cor` e `icone` a cada grupo de `TEMPLATES`.
+  - Marcar `data-grupo` nos chips para CSS por categoria.
+  - Lógica de colapsar Conexão / Campos detectados.
+  - Atualizar texto do botão primário com contagem.
+  - Renderização do contador na header dos templates.
+- `extension/manifest.json` — bump para **0.9.0**.
+- `public/agente-evolucao.zip` — repackage.
+
+Sem mudanças no backend, endpoints, ou lógica de preenchimento de campos.
