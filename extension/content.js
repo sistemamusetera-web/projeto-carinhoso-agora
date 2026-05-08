@@ -8,14 +8,14 @@
   // Templates rápidos — o usuário só clica nos chips e a IA expande para texto clínico
   const TEMPLATES = [
     {
-      grupo: "Comunicação",
+      grupo: "Comunicação", icone: "💬", key: "comunicacao",
       itens: [
         { label: "Paciente verbal", frase: "Paciente apresentou-se de forma verbal, comunicando-se por meio de fala funcional durante a sessão." },
         { label: "Paciente não-verbal", frase: "Paciente não-verbal, comunicando-se por meio de gestos, expressões faciais e vocalizações." },
       ],
     },
     {
-      grupo: "Chegada",
+      grupo: "Chegada", icone: "🚪", key: "chegada",
       itens: [
         { label: "Chegou tranquilo", frase: "Chegou ao atendimento de forma tranquila, calmo e receptivo ao acolhimento inicial." },
         { label: "Chegou agitado", frase: "Chegou ao atendimento agitado, demonstrando inquietação motora e dificuldade inicial de regulação." },
@@ -23,14 +23,14 @@
       ],
     },
     {
-      grupo: "Abordagem",
+      grupo: "Abordagem", icone: "🎯", key: "abordagem",
       itens: [
         { label: "Abordagem ativa", frase: "Foi conduzida abordagem terapêutica ativa, com proposição direta de atividades estruturadas pela terapeuta." },
         { label: "Abordagem receptiva", frase: "Foi conduzida abordagem terapêutica receptiva, acolhendo as iniciativas e produções espontâneas do paciente." },
       ],
     },
     {
-      grupo: "Interação",
+      grupo: "Interação", icone: "🤝", key: "interacao",
       itens: [
         { label: "Boa interação", frase: "Estabeleceu boa interação com a terapeuta, mantendo contato visual e respondendo às propostas de forma engajada." },
         { label: "Interação moderada", frase: "Apresentou interação moderada, alternando momentos de engajamento com períodos de retraimento." },
@@ -38,7 +38,7 @@
       ],
     },
     {
-      grupo: "Participação",
+      grupo: "Participação", icone: "🎵", key: "participacao",
       itens: [
         { label: "Boa participação", frase: "Demonstrou boa participação nas atividades propostas, envolvendo-se de forma colaborativa do início ao fim." },
         { label: "Resistência a propostas", frase: "Apresentou resistência a algumas propostas, sendo necessário ajustar o ritmo e oferecer alternativas." },
@@ -46,7 +46,7 @@
       ],
     },
     {
-      grupo: "Saída",
+      grupo: "Saída", icone: "👋", key: "saida",
       itens: [
         { label: "Saiu tranquilo", frase: "Encerrou a sessão de forma tranquila, regulado e organizado para a transição." },
         { label: "Saiu agitado", frase: "Encerrou a sessão ainda agitado, necessitando apoio para a transição para o ambiente externo." },
@@ -348,7 +348,7 @@
       <div class="evo-chat-header">
         <div style="flex:1;min-width:0">
           <strong>Agente de Evolução</strong>
-          <input class="evo-chat-paciente" placeholder="Nome do paciente" value="${escapeHtml(paciente.nome || "")}" style="display:block;width:100%;margin-top:4px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:4px;font-size:12px" />
+          <input class="evo-chat-paciente" placeholder="Nome do paciente" value="${escapeHtml(paciente.nome || "")}" />
         </div>
         <div style="display:flex;gap:6px;align-items:center;margin-left:8px">
           <button class="evo-chat-redetect" title="Re-detectar campos">↻</button>
@@ -377,15 +377,15 @@
       <div class="evo-chat-msgs"></div>
       <div class="evo-chat-templates">
         <div class="evo-tpl-head">
-          <span>⚡ Templates rápidos</span>
+          <span class="evo-tpl-head-title"><span class="evo-tpl-badge">⚡</span> Templates rápidos <span class="evo-tpl-count"></span></span>
           <a href="#" class="evo-tpl-clear">limpar</a>
         </div>
         <div class="evo-tpl-list">
           ${TEMPLATES.map((g) => `
-            <div class="evo-tpl-group">
-              <div class="evo-tpl-group-title">${escapeHtml(g.grupo)}</div>
+            <div class="evo-tpl-group" data-grupo="${g.key}">
+              <div class="evo-tpl-group-title"><span class="evo-tpl-group-icon">${g.icone}</span>${escapeHtml(g.grupo)}</div>
               <div class="evo-tpl-chips">
-                ${g.itens.map((it) => `<button type="button" class="evo-tpl-chip" data-frase="${escapeHtml(it.frase)}">${escapeHtml(it.label)}</button>`).join("")}
+                ${g.itens.map((it) => `<button type="button" class="evo-tpl-chip" data-grupo="${g.key}" data-frase="${escapeHtml(it.frase)}">${escapeHtml(it.label)}</button>`).join("")}
               </div>
             </div>
           `).join("")}
@@ -395,7 +395,7 @@
         <textarea placeholder="Opcional: adicione observações específicas (medicações, intercorrências, etc.)"></textarea>
         <div class="evo-chat-actions">
           <button class="evo-btn-secondary evo-clear">Limpar</button>
-          <button class="evo-btn-primary evo-send">Gerar e preencher</button>
+          <button class="evo-btn-primary evo-send"><span class="evo-send-icon">✨</span> <span class="evo-send-label">Gerar e preencher</span></button>
         </div>
       </div>
     `;
@@ -487,11 +487,16 @@
 
     // Templates rápidos: chips clicáveis
     const chipEls = Array.from(panel.querySelectorAll(".evo-tpl-chip"));
+    const countEl = panel.querySelector(".evo-tpl-count");
+    const sendLabel = panel.querySelector(".evo-send-label");
     const updateChipsUI = () => {
       for (const c of chipEls) {
         const f = c.dataset.frase;
         c.classList.toggle("active", chatState.selectedTemplates.has(f));
       }
+      const n = chatState.selectedTemplates.size;
+      if (countEl) countEl.textContent = n ? `(${n} selecionado${n > 1 ? "s" : ""})` : "";
+      if (sendLabel) sendLabel.textContent = n ? `Gerar com ${n} template${n > 1 ? "s" : ""}` : "Gerar e preencher";
     };
     for (const c of chipEls) {
       c.onclick = (e) => {
@@ -669,7 +674,9 @@
       return;
     }
     sendBtn.disabled = true;
-    sendBtn.textContent = "Gerando…";
+    const sendLabelEl = sendBtn.querySelector(".evo-send-label");
+    const prevLabel = sendLabelEl ? sendLabelEl.textContent : sendBtn.textContent;
+    if (sendLabelEl) sendLabelEl.textContent = "Gerando…"; else sendBtn.textContent = "Gerando…";
     setStatus(panel, "Enviando observações para a IA…");
 
     const resp = await sendBgMessage({
@@ -683,7 +690,7 @@
     });
 
     sendBtn.disabled = false;
-    sendBtn.textContent = "Gerar e preencher";
+    if (sendLabelEl) sendLabelEl.textContent = "Gerar e preencher"; else sendBtn.textContent = "Gerar e preencher";
     setStatus(panel, "");
 
     if (!resp?.ok) {

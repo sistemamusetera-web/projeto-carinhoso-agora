@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Agente de Evolução Terapêutica",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Gera evoluções terapêuticas com IA dentro do Clínica nas Nuvens.",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": [
