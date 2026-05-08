@@ -5,6 +5,10 @@
   const BTN_CLASS = "evo-ai-btn";
   let chatState = null; // { messages, fields, pacienteNome, pacienteIdExterno }
 
+  // Campos da assinatura/terapeuta — não devem ser enviados à IA nem sobrescritos por ela
+  const SIG_FIELD_RX = /(assinatura|assinar|signature|rodap[ée]|conselho|\bcrp\b|\bcrm\b|\bcro\b|\bcpf\b|registro|n[uú]mero do conselho|especialidade|[áa]rea de atua|forma[çc][aã]o|terapeuta|profissional|respons[áa]vel|psic[óo]log[oa]|atendente|^nome$|nome\s*completo|(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|assinatura.*data|data.*sess|data.*atend))/i;
+  function isSignatureField(nome) { return SIG_FIELD_RX.test(nome || ""); }
+
   // ------------------- helpers -------------------
   function setNativeValue(el, value) {
     if (el.getAttribute && el.getAttribute("contenteditable") === "true") {
