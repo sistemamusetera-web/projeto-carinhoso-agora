@@ -485,18 +485,50 @@
       window.addEventListener("mouseup", () => { dragging = false; });
     })();
 
+    // Templates rápidos: chips clicáveis
+    const chipEls = Array.from(panel.querySelectorAll(".evo-tpl-chip"));
+    const updateChipsUI = () => {
+      for (const c of chipEls) {
+        const f = c.dataset.frase;
+        c.classList.toggle("active", chatState.selectedTemplates.has(f));
+      }
+    };
+    for (const c of chipEls) {
+      c.onclick = (e) => {
+        e.preventDefault();
+        const f = c.dataset.frase;
+        if (chatState.selectedTemplates.has(f)) chatState.selectedTemplates.delete(f);
+        else chatState.selectedTemplates.add(f);
+        updateChipsUI();
+      };
+    }
+    const tplClear = panel.querySelector(".evo-tpl-clear");
+    if (tplClear) tplClear.onclick = (e) => { e.preventDefault(); chatState.selectedTemplates.clear(); updateChipsUI(); };
+
     panel.querySelector(".evo-clear").onclick = () => {
       chatState.messages = chatState.messages.slice(0, 1);
+      chatState.selectedTemplates.clear();
+      updateChipsUI();
       renderMsgs(panel);
       panel.querySelector("textarea").value = "";
     };
     const textarea = panel.querySelector("textarea");
     const sendBtn = panel.querySelector(".evo-send");
     const send = () => {
-      const txt = textarea.value.trim();
-      if (!txt) return;
-      chatState.messages.push({ role: "user", content: txt });
+      const extra = textarea.value.trim();
+      const tpls = Array.from(chatState.selectedTemplates);
+      if (!tpls.length && !extra) {
+        pushSystemMsg(panel, "Selecione ao menos um template ou descreva a sessão antes de gerar.");
+        return;
+      }
+      const partes = [];
+      if (tpls.length) partes.push("Observações da sessão:\n- " + tpls.join("\n- "));
+      if (extra) partes.push(extra);
+      const msg = partes.join("\n\n");
+      chatState.messages.push({ role: "user", content: msg });
       textarea.value = "";
+      chatState.selectedTemplates.clear();
+      updateChipsUI();
       renderMsgs(panel);
       generateAndFill(panel, sendBtn);
     };
