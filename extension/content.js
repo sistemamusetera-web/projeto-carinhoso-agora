@@ -674,7 +674,9 @@
       return;
     }
     sendBtn.disabled = true;
-    sendBtn.textContent = "Gerando…";
+    const sendLabelEl = sendBtn.querySelector(".evo-send-label");
+    const prevLabel = sendLabelEl ? sendLabelEl.textContent : sendBtn.textContent;
+    if (sendLabelEl) sendLabelEl.textContent = "Gerando…"; else sendBtn.textContent = "Gerando…";
     setStatus(panel, "Enviando observações para a IA…");
 
     const resp = await sendBgMessage({
@@ -688,7 +690,7 @@
     });
 
     sendBtn.disabled = false;
-    sendBtn.textContent = "Gerar e preencher";
+    if (sendLabelEl) sendLabelEl.textContent = "Gerar e preencher"; else sendBtn.textContent = "Gerar e preencher";
     setStatus(panel, "");
 
     if (!resp?.ok) {
