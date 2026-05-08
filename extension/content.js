@@ -20,6 +20,7 @@
         { label: "Chegou tranquilo", frase: "Chegou ao atendimento de forma tranquila, calmo e receptivo ao acolhimento inicial." },
         { label: "Chegou agitado", frase: "Chegou ao atendimento agitado, demonstrando inquietação motora e dificuldade inicial de regulação." },
         { label: "Chegou sonolento", frase: "Chegou ao atendimento sonolento, com baixo nível de alerta nos primeiros minutos." },
+        { label: "Após troca de medicação", frase: "Familiar relatou troca recente de medicação, observando-se reflexos no comportamento inicial do paciente." },
       ],
     },
     {
@@ -27,6 +28,7 @@
       itens: [
         { label: "Abordagem ativa", frase: "Foi conduzida abordagem terapêutica ativa, com proposição direta de atividades estruturadas pela terapeuta." },
         { label: "Abordagem receptiva", frase: "Foi conduzida abordagem terapêutica receptiva, acolhendo as iniciativas e produções espontâneas do paciente." },
+        { label: "Abordagem mista", frase: "Foi adotada abordagem mista, alternando proposições estruturadas e momentos de escuta às iniciativas do paciente." },
       ],
     },
     {
@@ -46,11 +48,71 @@
       ],
     },
     {
+      grupo: "Recursos", icone: "🎼", key: "recursos",
+      itens: [
+        { label: "Instrumentos melódicos", frase: "Foram utilizados instrumentos melódicos (teclado e violão) como recurso principal de mediação na sessão." },
+        { label: "Percussão", frase: "Foram utilizados instrumentos de percussão (tambor, chocalho e ovinho), favorecendo exploração rítmica e corporal." },
+        { label: "Canções de referência", frase: "Foram utilizadas canções de referência da playlist personalizada do paciente como suporte para engajamento e regulação." },
+        { label: "Recursos visuais", frase: "Foram utilizados recursos visuais (figuras e apoio com PECS) para sustentar a comunicação durante a sessão." },
+        { label: "Recursos corporais", frase: "Foram utilizados recursos corporais, com propostas de movimento e dança integradas à música." },
+      ],
+    },
+    {
+      grupo: "Comportamento", icone: "🧠", key: "comportamento",
+      itens: [
+        { label: "Bem regulado", frase: "Manteve-se bem regulado durante toda a sessão, com bom nível de organização sensorial e emocional." },
+        { label: "Episódios de desregulação", frase: "Apresentou episódios de desregulação ao longo da sessão, necessitando suporte da terapeuta para retorno ao estado regulado." },
+        { label: "Auto-regulação com apoio", frase: "Conseguiu se auto-regular com apoio da terapeuta e dos recursos musicais oferecidos." },
+        { label: "Estereotipias presentes", frase: "Apresentou estereotipias motoras e/ou vocais ao longo da sessão, com intensidade compatível com seu padrão habitual." },
+        { label: "Busca por contato/afeto", frase: "Demonstrou busca ativa por contato e afeto, aproximando-se da terapeuta e procurando interação." },
+      ],
+    },
+    {
+      grupo: "Respostas", icone: "🌱", key: "respostas",
+      itens: [
+        { label: "Boa resposta", frase: "Apresentou boa resposta às intervenções terapêuticas propostas, com participação efetiva." },
+        { label: "Resposta parcial", frase: "Apresentou resposta parcial às intervenções, engajando-se em parte das propostas." },
+        { label: "Necessidade de pistas", frase: "Necessitou de pistas verbais, visuais e/ou gestuais frequentes para sustentar a participação." },
+        { label: "Avanço x sessão anterior", frase: "Demonstrou avanço em relação à sessão anterior, com ampliação de respostas e iniciativas." },
+        { label: "Manutenção do nível", frase: "Manteve o nível de desempenho observado nas sessões anteriores, sem mudanças significativas." },
+      ],
+    },
+    {
+      grupo: "Plano aplicado", icone: "📋", key: "plano",
+      itens: [
+        { label: "Plano integral", frase: "O plano terapêutico previsto para a sessão foi seguido integralmente." },
+        { label: "Plano adaptado", frase: "O plano terapêutico foi adaptado durante a sessão conforme as respostas e necessidades do paciente." },
+        { label: "Improviso musical livre", frase: "Foi priorizado o improviso musical livre como eixo da sessão." },
+        { label: "Canção estruturada", frase: "Foi priorizado o uso de canção estruturada como eixo da sessão." },
+        { label: "Escuta ativa", frase: "Foi priorizada a escuta ativa de músicas selecionadas como eixo da sessão." },
+      ],
+    },
+    {
+      grupo: "Observações", icone: "🔎", key: "observacoes",
+      itens: [
+        { label: "Intercorrência na semana", frase: "Familiar relatou intercorrência ocorrida durante a semana, sinalizada para acompanhamento." },
+        { label: "Mudança de medicação", frase: "Familiar informou mudança recente na medicação do paciente." },
+        { label: "Ausência justificada", frase: "Houve ausência justificada na semana anterior, conforme informado pelo responsável." },
+        { label: "Avaliação multidisciplinar", frase: "Há avaliação multidisciplinar agendada, sinalizada para articulação com a equipe." },
+      ],
+    },
+    {
+      grupo: "Próximos objetivos", icone: "🎯", key: "proximos",
+      itens: [
+        { label: "Trabalhar turno", frase: "Manter o trabalho de turno (esperar a vez e responder) por meio de jogos musicais." },
+        { label: "Ampliar repertório", frase: "Ampliar o repertório de canções utilizado em sessão, incluindo novas referências do paciente." },
+        { label: "Comunicação verbal/CAA", frase: "Estimular a comunicação verbal e o uso de CAA como apoio durante as atividades musicais." },
+        { label: "Regulação via música", frase: "Trabalhar estratégias de regulação emocional mediadas pela música." },
+        { label: "Novo instrumento", frase: "Inserir, na próxima sessão, novo instrumento para ampliar a exploração sonora." },
+      ],
+    },
+    {
       grupo: "Saída", icone: "👋", key: "saida",
       itens: [
         { label: "Saiu tranquilo", frase: "Encerrou a sessão de forma tranquila, regulado e organizado para a transição." },
         { label: "Saiu agitado", frase: "Encerrou a sessão ainda agitado, necessitando apoio para a transição para o ambiente externo." },
         { label: "Saiu regulado/sorridente", frase: "Encerrou a sessão sorridente e regulado, demonstrando bem-estar ao final do atendimento." },
+        { label: "Saiu com responsável", frase: "Saiu acompanhado do responsável, que recebeu devolutiva breve sobre a sessão." },
       ],
     },
   ];

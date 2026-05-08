@@ -297,6 +297,12 @@
 .evo-tpl-group[data-grupo="interacao"]    { --evo-tpl-color: #0d9488; }
 .evo-tpl-group[data-grupo="participacao"] { --evo-tpl-color: #db2777; }
 .evo-tpl-group[data-grupo="saida"]        { --evo-tpl-color: #475569; }
+.evo-tpl-group[data-grupo="recursos"]     { --evo-tpl-color: #0891b2; }
+.evo-tpl-group[data-grupo="comportamento"]{ --evo-tpl-color: #4f46e5; }
+.evo-tpl-group[data-grupo="respostas"]    { --evo-tpl-color: #16a34a; }
+.evo-tpl-group[data-grupo="plano"]        { --evo-tpl-color: #64748b; }
+.evo-tpl-group[data-grupo="observacoes"]  { --evo-tpl-color: #ca8a04; }
+.evo-tpl-group[data-grupo="proximos"]     { --evo-tpl-color: #be185d; }
 
 /* ==== Input + ações ==== */
 .evo-chat-input {
