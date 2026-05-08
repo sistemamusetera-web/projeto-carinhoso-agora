@@ -339,6 +339,7 @@
             "Olá! Me conte como foi a sessão de hoje em linguagem natural: como a criança chegou, o que foi trabalhado, recursos e dinâmicas usadas, comportamento, respostas, observações e próximos passos. Eu organizo tudo nos campos do formulário.",
         },
       ],
+      selectedTemplates: new Set(),
     };
 
     const panel = document.createElement("div");
