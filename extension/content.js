@@ -5,6 +5,10 @@
   const BTN_CLASS = "evo-ai-btn";
   let chatState = null; // { messages, fields, pacienteNome, pacienteIdExterno }
 
+  // Campos da assinatura/terapeuta — não devem ser enviados à IA nem sobrescritos por ela
+  const SIG_FIELD_RX = /(assinatura|assinar|signature|rodap[ée]|conselho|\bcrp\b|\bcrm\b|\bcro\b|\bcpf\b|registro|n[uú]mero do conselho|especialidade|[áa]rea de atua|forma[çc][aã]o|terapeuta|profissional|respons[áa]vel|psic[óo]log[oa]|atendente|^nome$|nome\s*completo|(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|assinatura.*data|data.*sess|data.*atend))/i;
+  function isSignatureField(nome) { return SIG_FIELD_RX.test(nome || ""); }
+
   // ------------------- helpers -------------------
   function setNativeValue(el, value) {
     if (el.getAttribute && el.getAttribute("contenteditable") === "true") {
@@ -575,7 +579,7 @@
         pacienteNome: chatState.pacienteNome,
         pacienteIdExterno: chatState.pacienteIdExterno,
         mensagens: chatState.messages.filter((m) => m.role !== "system"),
-        campos: chatState.fields.map((f) => f.nome),
+        campos: chatState.fields.filter((f) => !isSignatureField(f.nome)).map((f) => f.nome),
       },
     });
 
@@ -717,9 +721,11 @@
   function fillFields(camposResp) {
     let count = 0;
     for (const f of chatState.fields) {
+      if (isSignatureField(f.nome)) continue; // não sobrescreve campos da assinatura
       const key = normalize(f.nome);
       let val = null;
       for (const [k, v] of Object.entries(camposResp)) {
+        if (isSignatureField(k)) continue;
         const nk = normalize(k);
         if (nk === key || nk.includes(key) || key.includes(nk)) { val = v; break; }
       }

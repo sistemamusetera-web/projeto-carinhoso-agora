@@ -1,39 +1,30 @@
-## Objetivo
-Garantir que a IA preencha **todos os campos** do formulário de evolução, mesmo quando o terapeuta enviar poucas informações no chat.
+## Problema
 
-## Diagnóstico
-Hoje o prompt em `src/routes/api/public/extension/chat-generate.ts` já pede expansão, mas tem brechas:
-- Permite "Sem intercorrências relevantes nesta sessão." quando a IA julgar que falta base → vira desculpa para campos curtos/vazios.
-- Não força tamanho mínimo por campo.
-- `tool_choice` força a função, mas não garante que cada `string` venha não-vazia (a IA pode mandar `""`).
-- Sem retry/segunda passada caso algum campo volte vazio.
+Ao abrir o formulário, a extensão preenche corretamente os campos da Assinatura (nome do terapeuta, conselho, especialidade, data) usando `fillTherapistFields()`. Mas ao clicar em **"Gerar e preencher"**, o fluxo é:
 
-## Mudanças (somente backend, no endpoint `chat-generate.ts`)
+1. `fillTherapistFields(terapeuta)` — preenche assinatura ✅
+2. `fillFields(camposResp)` — itera **todos** os campos detectados (`chatState.fields`) e, para cada um, procura uma chave da resposta da IA cujo nome contenha (ou esteja contido em) o nome do campo. Como os campos de assinatura ("Nome", "Conselho", "Assinatura", "Data") também foram enviados à IA como `campos`, a IA devolve texto para eles e o `fillFields` **sobrescreve** o que `fillTherapistFields` acabou de colocar.
 
-1. **Reescrever o system prompt — modo "preenchimento obrigatório"**
-   - Remover a frase que autoriza "Sem intercorrências…".
-   - Regra explícita: "É PROIBIDO retornar qualquer campo vazio, com `-`, `N/A`, ou frases genéricas curtas. Cada campo deve ter no mínimo 3 frases completas (≈ 40 palavras)."
-   - Reforçar: usar perfil + objetivos + histórico + abordagem do terapeuta para inferir conteúdo plausível e coerente quando a nota do terapeuta for curta.
-   - Manter a regra anti-alucinação (não inventar diagnósticos, medicações, datas, pessoas novas).
-   - Instrução de coerência cruzada entre os campos (mesma sessão, mesma história).
+Resultado: os dados da Assinatura ficam "bagunçados" (substituídos por texto clínico genérico) após gerar.
 
-2. **Reforçar o schema da tool `preencher_evolucao`**
-   - Em cada propriedade, descrição: "Texto clínico obrigatório, mínimo 3 frases. Nunca vazio."
-   - Manter `required: campos` e `additionalProperties: false`.
+## Correção (somente em `extension/content.js`)
 
-3. **Validação + retry automático no servidor**
-   - Após receber `camposOut`, verificar quais campos vieram vazios ou muito curtos (`< 40 caracteres` ou contendo apenas `-`, `n/a`, `sem informações`, etc.).
-   - Se houver campos faltantes, fazer **uma segunda chamada** à IA passando a lista exata dos campos a recompletar + o que já foi gerado (para manter coerência) e mesclar o resultado.
-   - Limitar a 1 retry para não estourar custo/latência.
+1. **Marcar campos de assinatura/terapeuta** com um regex único (`SIG_FIELD_RX`) que casa com: `nome`, `terapeuta`, `profissional`, `responsável`, `psicólog[oa]`, `conselho`, `crp/crm/cro/cpf`, `registro`, `especialidade`, `área de atuação`, `formação`, `assinatura`, `assinar`, `signature`, `rodapé`, e variações de "data" associadas a sessão/atendimento/assinatura.
 
-4. **Aumentar levemente `max_tokens`** (de 4000 → 6000) para evitar truncamento quando há muitos campos.
+2. **Excluir esses campos da lista enviada à IA** em `generateAndFill()` (filtrar `chatState.fields` antes de montar `campos`), para que a IA nem tente gerar conteúdo para eles.
 
-5. **Logs**: registrar quantos campos vieram vazios e se o retry resolveu.
+3. **Skip na `fillFields()`**: pular qualquer field cujo `nome` case com `SIG_FIELD_RX`, como cinto de segurança caso a IA ainda devolva uma chave parecida.
 
-## Fora de escopo
-- Sem mudanças na extensão (`extension/*`), no formulário ou em outras rotas.
-- Sem mudança de modelo padrão (continua o configurado em `prompt_config`).
-- Sem mudança de UI.
+4. **Preservar dados já preenchidos**: em `fillFields`, se o elemento já tem valor (textarea/input/contenteditable não vazio) **e** o campo casa com `SIG_FIELD_RX`, não sobrescrever.
 
-## Arquivos afetados
-- `src/routes/api/public/extension/chat-generate.ts` (único arquivo).
+5. **Re-render da assinatura** continua igual após resposta (`chatState.renderSig(terapeuta)`), e `fillTherapistFields(terapeuta)` continua sendo chamado para reaplicar caso o site tenha limpado os campos.
+
+6. Bumpar `manifest.json` para **0.7.1** e reempacotar `public/agente-evolucao.zip`.
+
+Sem alterações em backend, UI da página /configuracoes ou outros arquivos.
+
+## Validação
+
+- Abrir o formulário → assinatura preenchida.
+- Digitar nota e clicar "Gerar e preencher" → campos clínicos preenchidos, assinatura **intacta**.
+- Mensagem do assistente continua mostrando os campos clínicos gerados.
