@@ -579,7 +579,7 @@
         pacienteNome: chatState.pacienteNome,
         pacienteIdExterno: chatState.pacienteIdExterno,
         mensagens: chatState.messages.filter((m) => m.role !== "system"),
-        campos: chatState.fields.map((f) => f.nome),
+        campos: chatState.fields.filter((f) => !isSignatureField(f.nome)).map((f) => f.nome),
       },
     });
 
