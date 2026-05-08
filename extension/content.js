@@ -356,15 +356,17 @@
           <button class="evo-chat-close" title="Fechar">×</button>
         </div>
       </div>
-      <div class="evo-chat-config" style="padding:10px 12px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;flex-direction:column;gap:6px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:11px;font-weight:600;color:#374151">Conexão</span>
-          <span class="evo-chat-conn-status" style="font-size:11px"></span>
+      <details class="evo-chat-config"${(!cfg.panelUrl || !cfg.apiKey) ? " open" : ""}>
+        <summary>
+          <span class="evo-cfg-summary"><span class="evo-cfg-icon">🔗</span><span class="evo-cfg-label">Conexão</span></span>
+          <span class="evo-chat-conn-status"></span>
+        </summary>
+        <div class="evo-cfg-body">
+          <input class="evo-chat-url" placeholder="URL do painel (https://...)" value="${escapeHtml(cfg.panelUrl || "")}" />
+          <input class="evo-chat-key" type="password" placeholder="API Key (evo_...)" value="${escapeHtml(cfg.apiKey || "")}" />
+          <button class="evo-chat-save-cfg">Salvar conexão</button>
         </div>
-        <input class="evo-chat-url" placeholder="URL do painel (https://...)" value="${escapeHtml(cfg.panelUrl || "")}" style="width:100%;box-sizing:border-box;padding:5px 7px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" />
-        <input class="evo-chat-key" type="password" placeholder="API Key (evo_...)" value="${escapeHtml(cfg.apiKey || "")}" style="width:100%;box-sizing:border-box;padding:5px 7px;border:1px solid #d1d5db;border-radius:4px;font-size:11px" />
-        <button class="evo-chat-save-cfg" style="padding:5px;border:0;border-radius:4px;background:#374151;color:white;font-size:11px;font-weight:600;cursor:pointer">Salvar conexão</button>
-      </div>
+      </details>
       <details class="evo-chat-signature">
         <summary>
           <span class="evo-sig-summary"><span class="evo-sig-icon">✍️</span><span class="evo-sig-label">Assinatura</span></span>
@@ -402,13 +404,16 @@
     document.body.appendChild(panel);
 
     const connStatus = panel.querySelector(".evo-chat-conn-status");
+    const cfgDetails = panel.querySelector(".evo-chat-config");
     const updateConnStatus = (cfg) => {
       if (cfg.panelUrl && cfg.apiKey) {
         connStatus.textContent = "✓ conectado";
-        connStatus.style.color = "#16a34a";
+        connStatus.className = "evo-chat-conn-status is-ok";
+        cfgDetails.classList.remove("is-warn");
       } else {
         connStatus.textContent = "⚠ não configurado";
-        connStatus.style.color = "#dc2626";
+        connStatus.className = "evo-chat-conn-status is-warn";
+        cfgDetails.classList.add("is-warn");
       }
     };
     updateConnStatus(cfg);
@@ -454,9 +459,10 @@
     panel.querySelector(".evo-chat-save-cfg").onclick = async () => {
       const url = panel.querySelector(".evo-chat-url").value.trim().replace(/\/$/, "");
       const key = panel.querySelector(".evo-chat-key").value.trim();
-      if (!url || !key) { connStatus.textContent = "preencha URL e key"; connStatus.style.color = "#dc2626"; return; }
+      if (!url || !key) { connStatus.textContent = "preencha URL e key"; connStatus.className = "evo-chat-conn-status is-warn"; return; }
       await saveConfig(url, key);
       updateConnStatus({ panelUrl: url, apiKey: key });
+      cfgDetails.removeAttribute("open");
     };
 
     panel.querySelector(".evo-chat-close").onclick = () => panel.remove();
