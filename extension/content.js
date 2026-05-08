@@ -721,9 +721,11 @@
   function fillFields(camposResp) {
     let count = 0;
     for (const f of chatState.fields) {
+      if (isSignatureField(f.nome)) continue; // não sobrescreve campos da assinatura
       const key = normalize(f.nome);
       let val = null;
       for (const [k, v] of Object.entries(camposResp)) {
+        if (isSignatureField(k)) continue;
         const nk = normalize(k);
         if (nk === key || nk.includes(key) || key.includes(nk)) { val = v; break; }
       }
