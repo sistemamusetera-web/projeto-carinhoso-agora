@@ -375,8 +375,24 @@
       <div class="evo-chat-fields">Detectando campos…</div>
       <div class="evo-chat-status" style="display:none"></div>
       <div class="evo-chat-msgs"></div>
+      <div class="evo-chat-templates">
+        <div class="evo-tpl-head">
+          <span>⚡ Templates rápidos</span>
+          <a href="#" class="evo-tpl-clear">limpar</a>
+        </div>
+        <div class="evo-tpl-list">
+          ${TEMPLATES.map((g) => `
+            <div class="evo-tpl-group">
+              <div class="evo-tpl-group-title">${escapeHtml(g.grupo)}</div>
+              <div class="evo-tpl-chips">
+                ${g.itens.map((it) => `<button type="button" class="evo-tpl-chip" data-frase="${escapeHtml(it.frase)}">${escapeHtml(it.label)}</button>`).join("")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
       <div class="evo-chat-input">
-        <textarea placeholder="Descreva a sessão de hoje..."></textarea>
+        <textarea placeholder="Opcional: adicione observações específicas (medicações, intercorrências, etc.)"></textarea>
         <div class="evo-chat-actions">
           <button class="evo-btn-secondary evo-clear">Limpar</button>
           <button class="evo-btn-primary evo-send">Gerar e preencher</button>
