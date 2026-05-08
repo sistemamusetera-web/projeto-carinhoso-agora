@@ -459,9 +459,10 @@
     panel.querySelector(".evo-chat-save-cfg").onclick = async () => {
       const url = panel.querySelector(".evo-chat-url").value.trim().replace(/\/$/, "");
       const key = panel.querySelector(".evo-chat-key").value.trim();
-      if (!url || !key) { connStatus.textContent = "preencha URL e key"; connStatus.style.color = "#dc2626"; return; }
+      if (!url || !key) { connStatus.textContent = "preencha URL e key"; connStatus.className = "evo-chat-conn-status is-warn"; return; }
       await saveConfig(url, key);
       updateConnStatus({ panelUrl: url, apiKey: key });
+      cfgDetails.removeAttribute("open");
     };
 
     panel.querySelector(".evo-chat-close").onclick = () => panel.remove();
