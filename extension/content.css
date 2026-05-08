@@ -184,57 +184,63 @@
 .evo-msg-user { background: linear-gradient(135deg, #5a7e5f, #3d5841); color: white; align-self: flex-end; border-bottom-right-radius: 3px; }
 .evo-msg-system { background: #fef3c7; color: #78350f; font-size: 12px; align-self: center; }
 
-/* ==== Templates rápidos ==== */
+/* ==== Templates rápidos (destaque principal) ==== */
 .evo-chat-templates {
-  border-top: 1px solid #e2e8f0;
-  background: linear-gradient(180deg, #fafbfc, #f8fafc);
-  padding: 10px 12px;
-  max-height: clamp(160px, 32vh, 260px);
+  flex: 1 1 auto;
+  min-height: 200px;
+  border-top: 2px solid #4b6b4f;
+  background:
+    radial-gradient(circle at top right, rgba(75,107,79,0.06), transparent 60%),
+    linear-gradient(180deg, #ffffff, #f6faf6);
+  padding: 12px 14px 14px;
   overflow-y: auto;
+  box-shadow: inset 0 2px 6px -2px rgba(75,107,79,0.15);
 }
 .evo-tpl-head {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 12px; font-weight: 600; color: #1f2937;
-  margin-bottom: 8px;
+  font-size: 13px; font-weight: 700; color: #1f2937;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #d1d5db;
 }
-.evo-tpl-head-title { display: inline-flex; align-items: center; gap: 6px; }
+.evo-tpl-head-title { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; }
 .evo-tpl-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px;
+  width: 24px; height: 24px;
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   border-radius: 999px;
-  font-size: 11px;
-  box-shadow: 0 2px 4px rgba(245,158,11,0.35);
+  font-size: 13px;
+  box-shadow: 0 2px 6px rgba(245,158,11,0.45);
 }
-.evo-tpl-count { font-weight: 500; color: #4b6b4f; font-size: 11px; }
+.evo-tpl-count { font-weight: 600; color: #4b6b4f; font-size: 11px; background:#ecfdf5; padding:2px 8px; border-radius:999px; }
 .evo-tpl-clear {
   font-size: 11px; color: #64748b;
   text-decoration: none; cursor: pointer;
-  padding: 2px 8px; border-radius: 999px;
+  padding: 3px 10px; border-radius: 999px;
   transition: background .12s ease, color .12s ease;
 }
 .evo-tpl-clear:hover { background: #e2e8f0; color: #1f2937; }
 
-.evo-tpl-list { display: flex; flex-direction: column; gap: 10px; }
+.evo-tpl-list { display: flex; flex-direction: column; gap: 12px; }
 
 .evo-tpl-group-title {
   display: flex; align-items: center; gap: 6px;
-  font-size: 10px; font-weight: 700;
+  font-size: 10.5px; font-weight: 800;
   color: var(--evo-tpl-color, #6b7280);
-  text-transform: uppercase; letter-spacing: 0.6px;
-  margin-bottom: 5px;
+  text-transform: uppercase; letter-spacing: 0.7px;
+  margin-bottom: 6px;
 }
 .evo-tpl-group-title::after {
   content: ""; flex: 1; height: 1px;
   background: linear-gradient(to right, currentColor, transparent);
-  opacity: 0.25;
+  opacity: 0.3;
 }
-.evo-tpl-group-icon { font-size: 12px; }
+.evo-tpl-group-icon { font-size: 13px; }
 
-.evo-tpl-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.evo-tpl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .evo-tpl-chip {
-  padding: 5px 11px;
-  font-size: 11.5px; font-weight: 500;
+  padding: 6px 13px;
+  font-size: 12px; font-weight: 600;
   border: 1.5px solid var(--evo-tpl-color, #d1d5db);
   background: #ffffff;
   color: var(--evo-tpl-color, #374151);
@@ -243,19 +249,20 @@
   line-height: 1.3;
   transition: all .15s ease;
   white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 .evo-tpl-chip:hover {
-  background: color-mix(in srgb, var(--evo-tpl-color, #4b6b4f) 10%, white);
+  background: color-mix(in srgb, var(--evo-tpl-color, #4b6b4f) 12%, white);
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--evo-tpl-color, #4b6b4f) 25%, transparent);
+  box-shadow: 0 3px 8px color-mix(in srgb, var(--evo-tpl-color, #4b6b4f) 30%, transparent);
 }
 .evo-tpl-chip.active {
   background: var(--evo-tpl-color, #4b6b4f);
   border-color: var(--evo-tpl-color, #4b6b4f);
   color: #ffffff;
-  font-weight: 600;
-  transform: scale(1.03);
-  box-shadow: 0 3px 8px color-mix(in srgb, var(--evo-tpl-color, #4b6b4f) 40%, transparent);
+  font-weight: 700;
+  transform: scale(1.04);
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--evo-tpl-color, #4b6b4f) 45%, transparent);
 }
 
 /* Cores por grupo */
