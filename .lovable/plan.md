@@ -1,30 +1,61 @@
-## Problema
+## Templates rápidos no painel da extensão
 
-Ao abrir o formulário, a extensão preenche corretamente os campos da Assinatura (nome do terapeuta, conselho, especialidade, data) usando `fillTherapistFields()`. Mas ao clicar em **"Gerar e preencher"**, o fluxo é:
+Adicionar uma barra de "templates" (chips clicáveis) dentro do painel flutuante da extensão. O usuário só clica nos templates desejados (pode escolher vários) e em "Gerar e preencher" — o texto consolidado vira a observação enviada à IA, que então preenche o formulário.
 
-1. `fillTherapistFields(terapeuta)` — preenche assinatura ✅
-2. `fillFields(camposResp)` — itera **todos** os campos detectados (`chatState.fields`) e, para cada um, procura uma chave da resposta da IA cujo nome contenha (ou esteja contido em) o nome do campo. Como os campos de assinatura ("Nome", "Conselho", "Assinatura", "Data") também foram enviados à IA como `campos`, a IA devolve texto para eles e o `fillFields` **sobrescreve** o que `fillTherapistFields` acabou de colocar.
+### Templates inclusos (editáveis no código)
 
-Resultado: os dados da Assinatura ficam "bagunçados" (substituídos por texto clínico genérico) após gerar.
+Organizados em grupos para facilitar a escolha:
 
-## Correção (somente em `extension/content.js`)
+**Comunicação**
+- Paciente verbal
+- Paciente não-verbal
 
-1. **Marcar campos de assinatura/terapeuta** com um regex único (`SIG_FIELD_RX`) que casa com: `nome`, `terapeuta`, `profissional`, `responsável`, `psicólog[oa]`, `conselho`, `crp/crm/cro/cpf`, `registro`, `especialidade`, `área de atuação`, `formação`, `assinatura`, `assinar`, `signature`, `rodapé`, e variações de "data" associadas a sessão/atendimento/assinatura.
+**Chegada**
+- Chegou tranquilo
+- Chegou agitado
+- Chegou sonolento
 
-2. **Excluir esses campos da lista enviada à IA** em `generateAndFill()` (filtrar `chatState.fields` antes de montar `campos`), para que a IA nem tente gerar conteúdo para eles.
+**Abordagem**
+- Abordagem ativa
+- Abordagem receptiva
 
-3. **Skip na `fillFields()`**: pular qualquer field cujo `nome` case com `SIG_FIELD_RX`, como cinto de segurança caso a IA ainda devolva uma chave parecida.
+**Interação**
+- Boa interação
+- Interação moderada
+- Baixa interação
 
-4. **Preservar dados já preenchidos**: em `fillFields`, se o elemento já tem valor (textarea/input/contenteditable não vazio) **e** o campo casa com `SIG_FIELD_RX`, não sobrescrever.
+**Participação / Resposta**
+- Boa participação nas atividades
+- Resistência a algumas propostas
+- Respondeu bem aos recursos musicais
 
-5. **Re-render da assinatura** continua igual após resposta (`chatState.renderSig(terapeuta)`), e `fillTherapistFields(terapeuta)` continua sendo chamado para reaplicar caso o site tenha limpado os campos.
+**Saída**
+- Saiu tranquilo
+- Saiu agitado
+- Saiu sorridente / regulado
 
-6. Bumpar `manifest.json` para **0.7.1** e reempacotar `public/agente-evolucao.zip`.
+Cada chip tem um `label` curto (mostrado no botão) e um `frase` completa em texto clínico (ex.: "Paciente apresentou-se de forma verbal, comunicando-se com frases curtas e funcionais durante a sessão.") que é o que efetivamente é enviado à IA.
 
-Sem alterações em backend, UI da página /configuracoes ou outros arquivos.
+### Como funciona na UI
 
-## Validação
+1. Logo acima do `<textarea>` de "Descreva a sessão de hoje…", aparece a seção **"Templates rápidos"** com os chips agrupados por categoria.
+2. Clicar num chip alterna selecionado/deselecionado (visual destacado).
+3. Um botão **"Limpar templates"** desmarca todos.
+4. Ao clicar em **"Gerar e preencher"**:
+   - As frases dos chips selecionados são concatenadas (uma por linha) e prefixadas com "Observações da sessão:".
+   - Se o usuário também escreveu algo no textarea, esse texto é anexado depois.
+   - O resultado vira a mensagem `user` enviada para a IA (mesmo fluxo atual de `generateAndFill`), que continua expandindo em texto clínico para cada campo do formulário.
+5. Após gerar, os chips são desmarcados automaticamente.
 
-- Abrir o formulário → assinatura preenchida.
-- Digitar nota e clicar "Gerar e preencher" → campos clínicos preenchidos, assinatura **intacta**.
-- Mensagem do assistente continua mostrando os campos clínicos gerados.
+### Mudanças técnicas
+
+- **`extension/content.js`**:
+  - Nova constante `TEMPLATES` (lista de grupos com `{ label, frase }`).
+  - Renderizar a barra de chips dentro do `openChat()` (acima do textarea).
+  - Estado `chatState.selectedTemplates: Set<string>` para controlar seleção.
+  - Em `send()` / `generateAndFill()`: se houver templates selecionados, montar mensagem combinada antes de enviar.
+- **`extension/content.css`**: estilos para `.evo-tpl-group`, `.evo-tpl-chip`, `.evo-tpl-chip.active`.
+- **`extension/manifest.json`**: bump para **0.8.0**.
+- **`public/agente-evolucao.zip`**: repackage.
+
+Sem mudanças no backend / endpoints — a IA continua recebendo texto livre e preenchendo o formulário como hoje.
