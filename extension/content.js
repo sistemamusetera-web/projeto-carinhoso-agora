@@ -487,11 +487,16 @@
 
     // Templates rápidos: chips clicáveis
     const chipEls = Array.from(panel.querySelectorAll(".evo-tpl-chip"));
+    const countEl = panel.querySelector(".evo-tpl-count");
+    const sendLabel = panel.querySelector(".evo-send-label");
     const updateChipsUI = () => {
       for (const c of chipEls) {
         const f = c.dataset.frase;
         c.classList.toggle("active", chatState.selectedTemplates.has(f));
       }
+      const n = chatState.selectedTemplates.size;
+      if (countEl) countEl.textContent = n ? `(${n} selecionado${n > 1 ? "s" : ""})` : "";
+      if (sendLabel) sendLabel.textContent = n ? `Gerar com ${n} template${n > 1 ? "s" : ""}` : "Gerar e preencher";
     };
     for (const c of chipEls) {
       c.onclick = (e) => {
