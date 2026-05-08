@@ -404,13 +404,16 @@
     document.body.appendChild(panel);
 
     const connStatus = panel.querySelector(".evo-chat-conn-status");
+    const cfgDetails = panel.querySelector(".evo-chat-config");
     const updateConnStatus = (cfg) => {
       if (cfg.panelUrl && cfg.apiKey) {
         connStatus.textContent = "✓ conectado";
-        connStatus.style.color = "#16a34a";
+        connStatus.className = "evo-chat-conn-status is-ok";
+        cfgDetails.classList.remove("is-warn");
       } else {
         connStatus.textContent = "⚠ não configurado";
-        connStatus.style.color = "#dc2626";
+        connStatus.className = "evo-chat-conn-status is-warn";
+        cfgDetails.classList.add("is-warn");
       }
     };
     updateConnStatus(cfg);
