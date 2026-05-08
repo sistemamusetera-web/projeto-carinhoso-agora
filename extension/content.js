@@ -3,7 +3,57 @@
 
 (function () {
   const BTN_CLASS = "evo-ai-btn";
-  let chatState = null; // { messages, fields, pacienteNome, pacienteIdExterno }
+  let chatState = null; // { messages, fields, pacienteNome, pacienteIdExterno, selectedTemplates }
+
+  // Templates rápidos — o usuário só clica nos chips e a IA expande para texto clínico
+  const TEMPLATES = [
+    {
+      grupo: "Comunicação",
+      itens: [
+        { label: "Paciente verbal", frase: "Paciente apresentou-se de forma verbal, comunicando-se por meio de fala funcional durante a sessão." },
+        { label: "Paciente não-verbal", frase: "Paciente não-verbal, comunicando-se por meio de gestos, expressões faciais e vocalizações." },
+      ],
+    },
+    {
+      grupo: "Chegada",
+      itens: [
+        { label: "Chegou tranquilo", frase: "Chegou ao atendimento de forma tranquila, calmo e receptivo ao acolhimento inicial." },
+        { label: "Chegou agitado", frase: "Chegou ao atendimento agitado, demonstrando inquietação motora e dificuldade inicial de regulação." },
+        { label: "Chegou sonolento", frase: "Chegou ao atendimento sonolento, com baixo nível de alerta nos primeiros minutos." },
+      ],
+    },
+    {
+      grupo: "Abordagem",
+      itens: [
+        { label: "Abordagem ativa", frase: "Foi conduzida abordagem terapêutica ativa, com proposição direta de atividades estruturadas pela terapeuta." },
+        { label: "Abordagem receptiva", frase: "Foi conduzida abordagem terapêutica receptiva, acolhendo as iniciativas e produções espontâneas do paciente." },
+      ],
+    },
+    {
+      grupo: "Interação",
+      itens: [
+        { label: "Boa interação", frase: "Estabeleceu boa interação com a terapeuta, mantendo contato visual e respondendo às propostas de forma engajada." },
+        { label: "Interação moderada", frase: "Apresentou interação moderada, alternando momentos de engajamento com períodos de retraimento." },
+        { label: "Baixa interação", frase: "Apresentou baixa interação durante a sessão, com pouca resposta aos estímulos e às propostas oferecidas." },
+      ],
+    },
+    {
+      grupo: "Participação",
+      itens: [
+        { label: "Boa participação", frase: "Demonstrou boa participação nas atividades propostas, envolvendo-se de forma colaborativa do início ao fim." },
+        { label: "Resistência a propostas", frase: "Apresentou resistência a algumas propostas, sendo necessário ajustar o ritmo e oferecer alternativas." },
+        { label: "Respondeu bem aos recursos musicais", frase: "Respondeu positivamente aos recursos musicais utilizados, com engajamento corporal e vocal." },
+      ],
+    },
+    {
+      grupo: "Saída",
+      itens: [
+        { label: "Saiu tranquilo", frase: "Encerrou a sessão de forma tranquila, regulado e organizado para a transição." },
+        { label: "Saiu agitado", frase: "Encerrou a sessão ainda agitado, necessitando apoio para a transição para o ambiente externo." },
+        { label: "Saiu regulado/sorridente", frase: "Encerrou a sessão sorridente e regulado, demonstrando bem-estar ao final do atendimento." },
+      ],
+    },
+  ];
 
   // Campos da assinatura/terapeuta — não devem ser enviados à IA nem sobrescritos por ela
   const SIG_FIELD_RX = /(assinatura|assinar|signature|rodap[ée]|conselho|\bcrp\b|\bcrm\b|\bcro\b|\bcpf\b|registro|n[uú]mero do conselho|especialidade|[áa]rea de atua|forma[çc][aã]o|terapeuta|profissional|respons[áa]vel|psic[óo]log[oa]|atendente|^nome$|nome\s*completo|(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|assinatura.*data|data.*sess|data.*atend))/i;
