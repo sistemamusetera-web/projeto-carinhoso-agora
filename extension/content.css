@@ -303,6 +303,12 @@
 .evo-tpl-group[data-grupo="plano"]        { --evo-tpl-color: #64748b; }
 .evo-tpl-group[data-grupo="observacoes"]  { --evo-tpl-color: #ca8a04; }
 .evo-tpl-group[data-grupo="proximos"]     { --evo-tpl-color: #be185d; }
+.evo-tpl-group[data-grupo="emocional"]        { --evo-tpl-color: #e11d48; }
+.evo-tpl-group[data-grupo="vinculo"]          { --evo-tpl-color: #a21caf; }
+.evo-tpl-group[data-grupo="musical"]          { --evo-tpl-color: #0ea5e9; }
+.evo-tpl-group[data-grupo="sensorial"]        { --evo-tpl-color: #f97316; }
+.evo-tpl-group[data-grupo="familia"]          { --evo-tpl-color: #0d9488; }
+.evo-tpl-group[data-grupo="encaminhamentos"]  { --evo-tpl-color: #2563eb; }
 
 /* ==== Input + ações ==== */
 .evo-chat-input {

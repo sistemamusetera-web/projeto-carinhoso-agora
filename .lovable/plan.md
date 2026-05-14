@@ -1,69 +1,96 @@
-## Adicionar mais templates alinhados ao formulário de evolução
+## Mais templates prontos, profissionais e completos
 
-O formulário de evolução tem 8 seções: **Descrição da sessão, Recursos utilizados, Comportamento, Respostas terapêuticas, Participação, Plano aplicado, Observações, Próximos objetivos**.
+Hoje há 12 grupos (Comunicação, Chegada, Abordagem, Interação, Participação, Recursos, Comportamento, Respostas, Plano, Observações, Próximos objetivos, Saída). A proposta é **densificar os grupos existentes** com mais variações clínicas e **adicionar 6 novos grupos** cobrindo dimensões que ainda faltam na musicoterapia.
 
-Hoje os templates cobrem só: Comunicação, Chegada, Abordagem, Interação, Participação, Saída — faltam grupos diretamente ligados às seções do formulário.
+### 1) Novos grupos em `extension/content.js` (constante `TEMPLATES`)
 
-### Novos grupos a adicionar em `extension/content.js` (constante `TEMPLATES`)
+1. **Estado emocional 😊** (`emocional`, cor `#e11d48`)
+   - Humor estável, eutímico
+   - Humor irritável / lábil
+   - Choro durante a sessão
+   - Riso e expressões de prazer
+   - Apatia / baixa expressividade
+   - Ansiedade observável
 
-1. **Recursos 🎼** (key: `recursos`) — cor teal/índigo
-   - Instrumentos melódicos (teclado/violão)
-   - Instrumentos de percussão (tambor, chocalho, ovinho)
-   - Canções de referência / playlist personalizada
-   - Recursos visuais (figuras, PECS)
-   - Recursos corporais (movimento, dança)
+2. **Vínculo terapêutico 💞** (`vinculo`, cor `#a21caf`)
+   - Vínculo bem estabelecido e fortalecido
+   - Vínculo em construção
+   - Procurou a terapeuta espontaneamente
+   - Manteve distância / esquiva inicial
+   - Demonstrou confiança em propostas novas
 
-2. **Comportamento 🧠** (key: `comportamento`) — cor índigo
-   - Bem regulado durante toda a sessão
-   - Episódios de desregulação
-   - Auto-regulação com apoio
-   - Estereotipias presentes
-   - Busca por contato/afeto
+3. **Aspectos musicais 🎶** (`musical`, cor `#0ea5e9`)
+   - Engajamento rítmico (bateu palmas / acompanhou pulso)
+   - Engajamento melódico (vocalizações afinadas)
+   - Imitação rítmica de padrões propostos
+   - Improvisação espontânea ao instrumento
+   - Escolha autônoma de canção
+   - Resposta corporal à música (dança/movimento)
 
-3. **Respostas terapêuticas 🌱** (key: `respostas`) — cor verde
-   - Boa resposta às intervenções
-   - Resposta parcial
-   - Necessidade de muitas pistas
-   - Avanço em relação à sessão anterior
-   - Manutenção do nível anterior
+4. **Aspectos sensoriais 🌈** (`sensorial`, cor `#f97316`)
+   - Boa modulação sensorial
+   - Hipersensibilidade auditiva
+   - Busca por estímulo proprioceptivo/vibratório
+   - Hipossensibilidade / busca intensa de estímulo
+   - Tolerou bem volume e timbres variados
 
-4. **Plano aplicado 📋** (key: `plano`) — cor cinza-azulado
-   - Plano seguido integralmente
-   - Plano adaptado durante a sessão
-   - Foco em improviso musical livre
-   - Foco em canção estruturada
-   - Foco em escuta ativa
+5. **Família / contexto 👨‍👩‍👧** (`familia`, cor `#0d9488`)
+   - Familiar presente em sala
+   - Familiar acompanhou da recepção
+   - Devolutiva breve ao responsável
+   - Orientações para casa entregues
+   - Solicitada reunião de devolutiva
 
-5. **Observações 🔎** (key: `observacoes`) — cor âmbar
-   - Familiar relatou intercorrência na semana
-   - Mudança de medicação informada
-   - Ausência justificada na semana anterior
-   - Avaliação multidisciplinar agendada
+6. **Encaminhamentos / articulação 🔗** (`encaminhamentos`, cor `#2563eb`)
+   - Sugerida articulação com fonoaudiologia
+   - Sugerida articulação com terapia ocupacional
+   - Sugerida articulação com psicologia
+   - Sugerida articulação com psiquiatria/neurologia
+   - Encaminhamento para reavaliação interna
 
-6. **Próximos objetivos 🎯** (key: `proximos`) — cor rosa/violeta
-   - Manter trabalho de turno (esperar/responder)
-   - Ampliar repertório de canções
-   - Estimular comunicação verbal/CAA
-   - Trabalhar regulação emocional via música
-   - Inserir novo instrumento na próxima sessão
+### 2) Itens extras nos grupos existentes
 
-Também acrescentar 1–2 itens nos grupos existentes onde fizer sentido (ex.: Chegada → "Chegou após troca de medicação"; Saída → "Saiu acompanhado do responsável").
+- **Comunicação**: "Comunicação por trocas vocais", "Uso de CAA (PECS/pranchas)", "Iniciativa comunicativa espontânea"
+- **Chegada**: "Chegou após escola/terapia anterior", "Chegou com queixa física relatada"
+- **Abordagem**: "Abordagem mediada por canção"
+- **Interação**: "Interação intermitente", "Buscou contato físico"
+- **Participação**: "Participação flutuante", "Liderou momento da sessão"
+- **Recursos**: "Objetos transicionais do paciente", "Recursos digitais (apps/áudio)"
+- **Comportamento**: "Comportamento opositor pontual", "Auto-agressão sinalizada"
+- **Respostas**: "Resposta acima do esperado", "Resposta inconsistente entre blocos"
+- **Plano aplicado**: "Sessão de avaliação", "Sessão de fechamento de ciclo"
+- **Observações**: "Mudança de rotina familiar relatada", "Início recente em outra terapia"
+- **Próximos objetivos**: "Trabalhar imitação rítmica", "Ampliar tempo de permanência em atividade", "Inserir familiar em momento da sessão"
+- **Saída**: "Saída antecipada por desregulação", "Saiu com tarefa musical para casa"
 
-### Mudanças técnicas
+Cada item segue o padrão `{ label, frase }` com frase clínica completa em tom profissional (1ª pessoa terapêutica), igual ao estilo já existente.
 
-- **`extension/content.js`**: estender o array `TEMPLATES` com os 6 novos grupos acima e itens extras nos existentes. Cada item segue o padrão `{ label, frase }` com frase clínica completa em 1ª pessoa profissional (igual ao tom atual).
-- **`extension/content.css`**: adicionar regras `[data-grupo="recursos|comportamento|respostas|plano|observacoes|proximos"]` com `--evo-tpl-color` para cada um, mantendo a paleta coerente:
-  - recursos: `#0891b2`
-  - comportamento: `#4f46e5`
-  - respostas: `#16a34a`
-  - plano: `#475569`
-  - observacoes: `#ca8a04`
-  - proximos: `#be185d`
-- **`extension/manifest.json`**: bump para **0.9.3**.
-- Repackage `public/agente-evolucao.zip`.
+### 3) `extension/content.css`
+
+Adicionar variáveis de cor para os 6 novos grupos no bloco `/* Cores por grupo */`:
+
+```css
+.evo-tpl-group[data-grupo="emocional"]        { --evo-tpl-color: #e11d48; }
+.evo-tpl-group[data-grupo="vinculo"]          { --evo-tpl-color: #a21caf; }
+.evo-tpl-group[data-grupo="musical"]          { --evo-tpl-color: #0ea5e9; }
+.evo-tpl-group[data-grupo="sensorial"]        { --evo-tpl-color: #f97316; }
+.evo-tpl-group[data-grupo="familia"]          { --evo-tpl-color: #0d9488; }
+.evo-tpl-group[data-grupo="encaminhamentos"]  { --evo-tpl-color: #2563eb; }
+```
+
+Sem outras mudanças de layout/CSS estrutural.
+
+### 4) `extension/manifest.json`
+
+Bump de versão para **0.9.4**.
+
+### 5) Repackage
+
+Gerar novamente `public/agente-evolucao.zip` com os arquivos atualizados.
 
 ### Fora do escopo
 
-- Não alterar layout/CSS estrutural do painel
-- Não mudar o system prompt (ele já cobre todas as seções)
+- Não alterar layout/estrutura do painel flutuante
+- Não mudar `system prompt` da IA (já cobre todas as seções)
 - Não tocar em UI React de `/configuracoes`
+- Não mexer em assinatura, conexão, autenticação ou backend
