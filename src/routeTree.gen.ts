@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PacientesRouteImport } from './routes/pacientes'
+import { Route as MobileBookmarkletRouteImport } from './routes/mobile-bookmarklet'
 import { Route as MobileRouteImport } from './routes/mobile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
@@ -23,6 +24,11 @@ import { Route as ApiPublicExtensionChatGenerateRouteImport } from './routes/api
 const PacientesRoute = PacientesRouteImport.update({
   id: '/pacientes',
   path: '/pacientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MobileBookmarkletRoute = MobileBookmarkletRouteImport.update({
+  id: '/mobile-bookmarklet',
+  path: '/mobile-bookmarklet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MobileRoute = MobileRouteImport.update({
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
+  '/mobile-bookmarklet': typeof MobileBookmarkletRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
+  '/mobile-bookmarklet': typeof MobileBookmarkletRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
   '/mobile': typeof MobileRoute
+  '/mobile-bookmarklet': typeof MobileBookmarkletRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/login'
     | '/mobile'
+    | '/mobile-bookmarklet'
     | '/pacientes'
     | '/pacientes/$id'
     | '/api/public/extension/chat-generate'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/login'
     | '/mobile'
+    | '/mobile-bookmarklet'
     | '/pacientes'
     | '/pacientes/$id'
     | '/api/public/extension/chat-generate'
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/login'
     | '/mobile'
+    | '/mobile-bookmarklet'
     | '/pacientes'
     | '/pacientes/$id'
     | '/api/public/extension/chat-generate'
@@ -156,6 +168,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   LoginRoute: typeof LoginRoute
   MobileRoute: typeof MobileRoute
+  MobileBookmarkletRoute: typeof MobileBookmarkletRoute
   PacientesRoute: typeof PacientesRouteWithChildren
   ApiPublicExtensionChatGenerateRoute: typeof ApiPublicExtensionChatGenerateRoute
   ApiPublicExtensionConfirmRoute: typeof ApiPublicExtensionConfirmRoute
@@ -170,6 +183,13 @@ declare module '@tanstack/react-router' {
       path: '/pacientes'
       fullPath: '/pacientes'
       preLoaderRoute: typeof PacientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mobile-bookmarklet': {
+      id: '/mobile-bookmarklet'
+      path: '/mobile-bookmarklet'
+      fullPath: '/mobile-bookmarklet'
+      preLoaderRoute: typeof MobileBookmarkletRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mobile': {
@@ -255,6 +275,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   LoginRoute: LoginRoute,
   MobileRoute: MobileRoute,
+  MobileBookmarkletRoute: MobileBookmarkletRoute,
   PacientesRoute: PacientesRouteWithChildren,
   ApiPublicExtensionChatGenerateRoute: ApiPublicExtensionChatGenerateRoute,
   ApiPublicExtensionConfirmRoute: ApiPublicExtensionConfirmRoute,
@@ -264,3 +285,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
