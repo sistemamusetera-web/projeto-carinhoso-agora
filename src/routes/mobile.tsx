@@ -153,13 +153,22 @@ function MobilePage() {
               </p>
             </div>
           </div>
-          <Link
-            to="/configuracoes"
-            className="rounded-md p-1.5 hover:bg-white/15"
-            aria-label="Configurações"
-          >
-            <Settings className="h-5 w-5" />
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/mobile-bookmarklet"
+              className="rounded-md px-2 py-1 text-[11px] font-semibold hover:bg-white/15"
+              title="Bookmarklet iPhone"
+            >
+              📑 iPhone
+            </Link>
+            <Link
+              to="/configuracoes"
+              className="rounded-md p-1.5 hover:bg-white/15"
+              aria-label="Configurações"
+            >
+              <Settings className="h-5 w-5" />
+            </Link>
+          </div>
         </div>
       </header>
 
