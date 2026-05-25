@@ -1,96 +1,58 @@
-## Mais templates prontos, profissionais e completos
+# PWA companion para uso no celular
 
-Hoje há 12 grupos (Comunicação, Chegada, Abordagem, Interação, Participação, Recursos, Comportamento, Respostas, Plano, Observações, Próximos objetivos, Saída). A proposta é **densificar os grupos existentes** com mais variações clínicas e **adicionar 6 novos grupos** cobrindo dimensões que ainda faltam na musicoterapia.
+Criar uma página web instalável (PWA leve, sem service worker) que funciona no celular. O terapeuta escolhe paciente, monta a nota com os mesmos templates da extensão, gera a evolução com IA pelo backend já existente e copia para colar no Clínica nas Nuvens.
 
-### 1) Novos grupos em `extension/content.js` (constante `TEMPLATES`)
+## Por que esta abordagem
 
-1. **Estado emocional 😊** (`emocional`, cor `#e11d48`)
-   - Humor estável, eutímico
-   - Humor irritável / lábil
-   - Choro durante a sessão
-   - Riso e expressões de prazer
-   - Apatia / baixa expressividade
-   - Ansiedade observável
+Extensões Chrome não rodam em PWA nem no Safari/Chrome iOS. Em vez disso, criamos uma página mobile que reaproveita 100% do backend (`/api/public/extension/chat-generate` e `/therapist`). Sem service worker (conforme guia do projeto), apenas manifest + ícones, para que iOS/Android possam "Adicionar à tela de início" e abrir como app.
 
-2. **Vínculo terapêutico 💞** (`vinculo`, cor `#a21caf`)
-   - Vínculo bem estabelecido e fortalecido
-   - Vínculo em construção
-   - Procurou a terapeuta espontaneamente
-   - Manteve distância / esquiva inicial
-   - Demonstrou confiança em propostas novas
+## Escopo
 
-3. **Aspectos musicais 🎶** (`musical`, cor `#0ea5e9`)
-   - Engajamento rítmico (bateu palmas / acompanhou pulso)
-   - Engajamento melódico (vocalizações afinadas)
-   - Imitação rítmica de padrões propostos
-   - Improvisação espontânea ao instrumento
-   - Escolha autônoma de canção
-   - Resposta corporal à música (dança/movimento)
+### 1. Nova rota `/mobile` (mobile-first, autenticada)
+- Lista de pacientes do terapeuta (busca por nome).
+- Tela de "Nova evolução" com:
+  - Seleção/criação do paciente.
+  - Painel de templates rápidos (mesmos grupos da extensão: Comunicação, Chegada, Abordagem, Interação, Participação, Saída, Recursos, Comportamento, Respostas, Plano, Observações, Próximos objetivos, Estado emocional, Vínculo, Aspectos musicais, Sensorial, Família, Encaminhamentos).
+  - Textarea para nota livre.
+  - Lista de "campos do formulário" pré-definida (descrição da sessão, recursos, comportamento, respostas, plano, observações, próximos objetivos) — editável.
+  - Botão "Gerar evolução com IA".
+- Tela de resultado com cada campo gerado em um cartão, botão **Copiar campo** e **Copiar tudo** (para colar no app do Clínica).
+- Inclui assinatura do terapeuta automaticamente (puxada de `prompt_config`).
 
-4. **Aspectos sensoriais 🌈** (`sensorial`, cor `#f97316`)
-   - Boa modulação sensorial
-   - Hipersensibilidade auditiva
-   - Busca por estímulo proprioceptivo/vibratório
-   - Hipossensibilidade / busca intensa de estímulo
-   - Tolerou bem volume e timbres variados
+### 2. Reaproveitamento de backend
+- Usa o endpoint público existente `/api/public/extension/chat-generate` (mesma lógica) — mas como o usuário já está logado no painel, **chamamos via `createServerFn` com `requireSupabaseAuth`** em vez de API key, criando um novo server function `gerarEvolucaoMobile` que faz a mesma coisa porém autenticado por sessão Supabase. Mais simples e seguro no mobile.
+- `gerarEvolucaoMobile` resolve/cria paciente, monta prompt e tools (igual ao chat-generate), chama AI Gateway, salva em `evolucoes` com `origem: "mobile-pwa"`.
 
-5. **Família / contexto 👨‍👩‍👧** (`familia`, cor `#0d9488`)
-   - Familiar presente em sala
-   - Familiar acompanhou da recepção
-   - Devolutiva breve ao responsável
-   - Orientações para casa entregues
-   - Solicitada reunião de devolutiva
+### 3. PWA instalável (manifest-only, sem SW)
+- `public/manifest.webmanifest` com `name`, `short_name`, `start_url: "/mobile"`, `display: "standalone"`, `theme_color`, ícones (reaproveita `extension/icon.png`).
+- `<link rel="manifest">` e `<meta name="apple-mobile-web-app-capable">` no `__root.tsx` (apenas tags, sem registrar service worker — segue regra do projeto).
+- Sem cache offline (intencional — sempre carrega versão atualizada).
 
-6. **Encaminhamentos / articulação 🔗** (`encaminhamentos`, cor `#2563eb`)
-   - Sugerida articulação com fonoaudiologia
-   - Sugerida articulação com terapia ocupacional
-   - Sugerida articulação com psicologia
-   - Sugerida articulação com psiquiatria/neurologia
-   - Encaminhamento para reavaliação interna
+### 4. Entrada no app
+- Adicionar card em `/configuracoes` com link "Abrir versão mobile" e instruções de "Adicionar à tela de início" (iOS Safari: compartilhar → adicionar; Android Chrome: menu → instalar app).
 
-### 2) Itens extras nos grupos existentes
+## Fora do escopo
+- Extensão Chrome (continua igual, v0.9.4).
+- Service worker / offline / push.
+- Edição inline dos campos no formulário do Clínica (mobile não consegue injetar — só copy/paste).
+- App nativo (Capacitor).
 
-- **Comunicação**: "Comunicação por trocas vocais", "Uso de CAA (PECS/pranchas)", "Iniciativa comunicativa espontânea"
-- **Chegada**: "Chegou após escola/terapia anterior", "Chegou com queixa física relatada"
-- **Abordagem**: "Abordagem mediada por canção"
-- **Interação**: "Interação intermitente", "Buscou contato físico"
-- **Participação**: "Participação flutuante", "Liderou momento da sessão"
-- **Recursos**: "Objetos transicionais do paciente", "Recursos digitais (apps/áudio)"
-- **Comportamento**: "Comportamento opositor pontual", "Auto-agressão sinalizada"
-- **Respostas**: "Resposta acima do esperado", "Resposta inconsistente entre blocos"
-- **Plano aplicado**: "Sessão de avaliação", "Sessão de fechamento de ciclo"
-- **Observações**: "Mudança de rotina familiar relatada", "Início recente em outra terapia"
-- **Próximos objetivos**: "Trabalhar imitação rítmica", "Ampliar tempo de permanência em atividade", "Inserir familiar em momento da sessão"
-- **Saída**: "Saída antecipada por desregulação", "Saiu com tarefa musical para casa"
+## Arquivos
 
-Cada item segue o padrão `{ label, frase }` com frase clínica completa em tom profissional (1ª pessoa terapêutica), igual ao estilo já existente.
+**Novos**
+- `src/routes/mobile.tsx` — lista de pacientes + entrada.
+- `src/routes/mobile.nova.tsx` — fluxo de geração (templates + nota + resultado).
+- `src/lib/evolucao-mobile.functions.ts` — `gerarEvolucaoMobile` (createServerFn + requireSupabaseAuth).
+- `src/lib/templates-evolucao.ts` — extrai o array de TEMPLATES da extensão para reuso.
+- `public/manifest.webmanifest` + `public/icon-192.png` + `public/icon-512.png` (gerados a partir do icon existente).
 
-### 3) `extension/content.css`
+**Editados**
+- `src/routes/__root.tsx` — adicionar tags manifest + apple-touch-icon.
+- `src/routes/configuracoes.tsx` — card "Versão mobile" com link e instruções.
+- `extension/content.js` — mover lista TEMPLATES para um JSON também consumido pelo mobile (opcional; aceitável duplicar para evitar refactor da extensão).
 
-Adicionar variáveis de cor para os 6 novos grupos no bloco `/* Cores por grupo */`:
-
-```css
-.evo-tpl-group[data-grupo="emocional"]        { --evo-tpl-color: #e11d48; }
-.evo-tpl-group[data-grupo="vinculo"]          { --evo-tpl-color: #a21caf; }
-.evo-tpl-group[data-grupo="musical"]          { --evo-tpl-color: #0ea5e9; }
-.evo-tpl-group[data-grupo="sensorial"]        { --evo-tpl-color: #f97316; }
-.evo-tpl-group[data-grupo="familia"]          { --evo-tpl-color: #0d9488; }
-.evo-tpl-group[data-grupo="encaminhamentos"]  { --evo-tpl-color: #2563eb; }
-```
-
-Sem outras mudanças de layout/CSS estrutural.
-
-### 4) `extension/manifest.json`
-
-Bump de versão para **0.9.4**.
-
-### 5) Repackage
-
-Gerar novamente `public/agente-evolucao.zip` com os arquivos atualizados.
-
-### Fora do escopo
-
-- Não alterar layout/estrutura do painel flutuante
-- Não mudar `system prompt` da IA (já cobre todas as seções)
-- Não tocar em UI React de `/configuracoes`
-- Não mexer em assinatura, conexão, autenticação ou backend
+## Detalhes técnicos
+- Mobile-first com Tailwind: layout single-column, chips de templates com mesmas cores semânticas usadas em `extension/content.css`.
+- Botão "Copiar tudo" gera texto com cabeçalhos `## campo\nconteúdo` + assinatura no final.
+- `gerarEvolucaoMobile` reaproveita 95% do código de `chat-generate.ts`; fatoramos a função de geração para `src/lib/gerar-evolucao.server.ts` e ambos endpoints chamam.
+- Sem alteração de schema de banco.
