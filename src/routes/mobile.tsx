@@ -14,7 +14,15 @@ import {
   listarPacientesMobile,
   obterTerapeutaMobile,
 } from "@/lib/evolucao-mobile.functions";
-import { Copy, Loader2, Sparkles, ArrowLeft, Settings, Check } from "lucide-react";
+import {
+  Copy,
+  Loader2,
+  ArrowLeft,
+  Settings,
+  Check,
+  ChevronDown,
+  RefreshCw,
+} from "lucide-react";
 
 export const Route = createFileRoute("/mobile")({
   component: () => (
@@ -109,12 +117,20 @@ function MobilePage() {
     return partes.join("\n\n") + ass;
   }
 
-  // ====== Render ======
+  const dataBR = new Date().toLocaleDateString("pt-BR");
+  const nomePacienteHeader = paciente?.nome ?? nomeNovo;
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-gradient-to-r from-[#5a7e5f] to-[#3d5841] px-4 py-3 text-white shadow-md">
-        <div className="flex items-center justify-between gap-2">
+    <div
+      className="min-h-screen pb-28"
+      style={{ background: "#f7faf7", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif" }}
+    >
+      {/* Header (igual painel flutuante) */}
+      <header
+        className="sticky top-0 z-10 px-4 py-3 text-white shadow-md"
+        style={{ background: "linear-gradient(135deg, #5a7e5f 0%, #3d5841 100%)" }}
+      >
+        <div className="mx-auto flex max-w-md items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             {step !== "paciente" && (
               <button
@@ -128,12 +144,12 @@ function MobilePage() {
                 <ArrowLeft className="h-5 w-5" />
               </button>
             )}
-            <div>
-              <h1 className="text-base font-semibold leading-tight">Evolução Mobile</h1>
-              <p className="text-xs opacity-80 leading-tight">
+            <div className="leading-tight">
+              <h1 className="text-[15px] font-semibold">🌱 Agente de Evolução</h1>
+              <p className="text-[11px] opacity-80">
                 {step === "paciente" && "Escolha o paciente"}
-                {step === "compor" && paciente?.nome}
-                {step === "resultado" && "Resultado — copie e cole no app"}
+                {step === "compor" && (nomePacienteHeader || "Compor sessão")}
+                {step === "resultado" && "Copie e cole no sistema"}
               </p>
             </div>
           </div>
@@ -147,20 +163,17 @@ function MobilePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 pt-4">
+      <main className="mx-auto max-w-md px-3 pt-3">
         {/* STEP 1: paciente */}
         {step === "paciente" && (
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-slate-700">Buscar paciente</label>
-              <input
-                type="text"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Digite o nome..."
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#4b6b4f] focus:ring-2 focus:ring-[#4b6b4f]/20"
-              />
-            </div>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar paciente..."
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#4b6b4f] focus:ring-2 focus:ring-[#4b6b4f]/20"
+            />
 
             <div className="space-y-2">
               {filtrados.map((p) => (
@@ -190,9 +203,9 @@ function MobilePage() {
               )}
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <label className="text-sm font-medium text-slate-700">
-                Ou criar paciente novo
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Ou criar novo
               </label>
               <div className="mt-2 flex gap-2">
                 <input
@@ -210,7 +223,8 @@ function MobilePage() {
                     setNota("");
                     setStep("compor");
                   }}
-                  className="rounded-lg bg-[#4b6b4f] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  style={{ background: "#4b6b4f" }}
                 >
                   Usar
                 </button>
@@ -219,53 +233,127 @@ function MobilePage() {
           </div>
         )}
 
-        {/* STEP 2: compor */}
+        {/* STEP 2: compor (espelha painel da extensão) */}
         {step === "compor" && (
-          <div className="space-y-5">
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Toque nos chips para incluir frases prontas. A IA expande para texto clínico.
-              Você pode adicionar uma nota livre abaixo.
-            </div>
+          <div className="space-y-3">
+            {/* Nome paciente (igual .evo-chat-paciente) */}
+            <input
+              type="text"
+              value={paciente?.nome ?? nomeNovo}
+              onChange={(e) => {
+                if (paciente) setPaciente({ ...paciente, nome: e.target.value });
+                else setNomeNovo(e.target.value);
+              }}
+              placeholder="Nome do paciente"
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium outline-none focus:border-[#4b6b4f] focus:ring-2 focus:ring-[#4b6b4f]/20"
+            />
 
-            {/* Templates */}
-            <div className="space-y-4">
-              {TEMPLATES.map((grupo) => (
-                <div key={grupo.key}>
-                  <div
-                    className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider"
-                    style={{ color: grupo.cor }}
+            {/* Cartão Assinatura (recolhível, igual .evo-chat-signature) */}
+            <details className="group rounded-lg border border-slate-200 bg-white shadow-sm">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-sm">
+                <span className="flex items-center gap-2 font-semibold text-slate-700">
+                  <span>✍️</span>
+                  <span>Assinatura</span>
+                </span>
+                <Link
+                  to="/configuracoes"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-xs font-medium text-[#047857] underline"
+                >
+                  editar
+                </Link>
+              </summary>
+              <div className="border-t border-slate-100 px-3 py-2.5 text-xs leading-relaxed text-slate-700">
+                {ther?.nome ? (
+                  <>
+                    <div>
+                      <b>{ther.nome}</b>
+                    </div>
+                    {ther.conselho && <div>🪪 {ther.conselho}</div>}
+                    {ther.especialidade && <div>🎓 {ther.especialidade}</div>}
+                    <div className="mt-1 text-slate-500">📅 {dataBR}</div>
+                  </>
+                ) : (
+                  <i className="text-slate-500">
+                    Nenhum dado de terapeuta.{" "}
+                    <Link to="/configuracoes" className="text-[#047857] underline">
+                      configurar agora
+                    </Link>
+                    <br />
+                    📅 {dataBR}
+                  </i>
+                )}
+              </div>
+            </details>
+
+            {/* Templates rápidos (igual .evo-chat-templates) */}
+            <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                  <span
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] text-white"
+                    style={{ background: "#4b6b4f" }}
                   >
-                    <span>{grupo.icone}</span>
-                    <span>{grupo.grupo}</span>
-                    <span className="ml-1 h-px flex-1 opacity-30" style={{ background: grupo.cor }} />
+                    ⚡
+                  </span>
+                  Templates rápidos
+                  {selected.length > 0 && (
+                    <span className="ml-1 rounded-full bg-[#4b6b4f]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#4b6b4f]">
+                      {selected.length}
+                    </span>
+                  )}
+                </span>
+                {selected.length > 0 && (
+                  <button
+                    onClick={() => setSelected([])}
+                    className="text-[11px] font-medium text-slate-500 underline"
+                  >
+                    limpar
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3 px-3 py-3">
+                {TEMPLATES.map((grupo) => (
+                  <div key={grupo.key}>
+                    <div
+                      className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider"
+                      style={{ color: grupo.cor }}
+                    >
+                      <span className="text-sm">{grupo.icone}</span>
+                      <span>{grupo.grupo}</span>
+                      <span
+                        className="ml-1 h-px flex-1 opacity-30"
+                        style={{ background: grupo.cor }}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {grupo.itens.map((it) => {
+                        const active = selected.some((s) => s.label === it.label);
+                        return (
+                          <button
+                            key={it.label}
+                            onClick={() => toggleItem(it)}
+                            className="rounded-full border-[1.5px] px-2.5 py-1 text-[11px] font-semibold transition active:scale-95"
+                            style={{
+                              borderColor: grupo.cor,
+                              background: active ? grupo.cor : "#fff",
+                              color: active ? "#fff" : grupo.cor,
+                            }}
+                          >
+                            {it.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {grupo.itens.map((it) => {
-                      const active = selected.some((s) => s.label === it.label);
-                      return (
-                        <button
-                          key={it.label}
-                          onClick={() => toggleItem(it)}
-                          className="rounded-full border-[1.5px] px-3 py-1.5 text-xs font-semibold transition active:scale-95"
-                          style={{
-                            borderColor: grupo.cor,
-                            background: active ? grupo.cor : "#fff",
-                            color: active ? "#fff" : grupo.cor,
-                          }}
-                        >
-                          {it.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            {/* Nota livre */}
-            <div>
-              <label className="text-sm font-medium text-slate-700">
-                Nota livre (opcional)
+            {/* Nota livre (.evo-chat-input adaptado) */}
+            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                Nota livre
               </label>
               <textarea
                 rows={4}
@@ -274,28 +362,29 @@ function MobilePage() {
                 placeholder="Ex.: hoje trabalhou com tambor, escolheu a canção 'Atirei o pau no gato'..."
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#4b6b4f] focus:ring-2 focus:ring-[#4b6b4f]/20"
               />
-              <p className="mt-1 text-xs text-slate-500">
-                {selected.length} chip(s) selecionado(s)
-              </p>
             </div>
           </div>
         )}
 
         {/* STEP 3: resultado */}
         {step === "resultado" && resultado && (
-          <div className="space-y-3">
+          <div className="space-y-3 pt-1">
             <button
               onClick={() => {
                 navigator.clipboard.writeText(textoCompleto());
                 toast.success("Tudo copiado");
               }}
-              className="w-full rounded-lg bg-[#4b6b4f] py-3 text-sm font-semibold text-white shadow active:scale-[0.99]"
+              className="w-full rounded-lg py-3 text-sm font-semibold text-white shadow active:scale-[0.99]"
+              style={{ background: "linear-gradient(135deg, #5a7e5f 0%, #3d5841 100%)" }}
             >
               📋 Copiar tudo (com assinatura)
             </button>
 
             {Object.entries(resultado.campos as Record<string, string>).map(([campo, texto]) => (
-              <div key={campo} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+              <div
+                key={campo}
+                className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+              >
                 <div className="mb-1 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-slate-800">{campo}</h3>
                   <button
@@ -323,18 +412,26 @@ function MobilePage() {
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                 <strong>Assinatura:</strong> {ther.nome}
                 {ther.conselho ? ` · ${ther.conselho}` : ""}
-                {ther.especialidade ? ` · ${ther.especialidade}` : ""} ·{" "}
-                {new Date().toLocaleDateString("pt-BR")}
+                {ther.especialidade ? ` · ${ther.especialidade}` : ""} · {dataBR}
               </div>
             )}
           </div>
         )}
       </main>
 
-      {/* Footer fixo */}
+      {/* Rodapé fixo (igual .evo-chat-actions) */}
       {step === "compor" && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
-          <div className="mx-auto max-w-2xl">
+          <div className="mx-auto flex max-w-md gap-2">
+            <button
+              onClick={() => {
+                setSelected([]);
+                setNota("");
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 active:scale-[0.99]"
+            >
+              Limpar
+            </button>
             <button
               onClick={() => gerarMut.mutate()}
               disabled={
@@ -342,7 +439,8 @@ function MobilePage() {
                 (!selected.length && !nota.trim()) ||
                 (!paciente?.nome && !nomeNovo.trim())
               }
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#5a7e5f] to-[#3d5841] py-3.5 text-sm font-semibold text-white shadow-md transition active:scale-[0.99] disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white shadow-md transition active:scale-[0.99] disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #5a7e5f 0%, #3d5841 100%)" }}
             >
               {gerarMut.isPending ? (
                 <>
@@ -350,7 +448,7 @@ function MobilePage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" /> Gerar evolução com IA
+                  <span>✨</span> Gerar e preencher
                 </>
               )}
             </button>
@@ -360,7 +458,7 @@ function MobilePage() {
 
       {step === "resultado" && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white p-3">
-          <div className="mx-auto max-w-2xl">
+          <div className="mx-auto max-w-md">
             <button
               onClick={() => {
                 setSelected([]);
@@ -368,9 +466,9 @@ function MobilePage() {
                 setResultado(null);
                 setStep("paciente");
               }}
-              className="w-full rounded-lg border border-slate-300 bg-white py-3 text-sm font-semibold text-slate-700 active:scale-[0.99]"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white py-3 text-sm font-semibold text-slate-700 active:scale-[0.99]"
             >
-              Nova evolução
+              <RefreshCw className="h-4 w-4" /> Nova evolução
             </button>
           </div>
         </div>
