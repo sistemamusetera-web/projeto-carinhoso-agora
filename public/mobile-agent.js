@@ -1,0 +1,510 @@
+// Agente de Evolução — versão mobile (bookmarklet)
+// Injetado pelo Safari/iOS via Favorito.
+// Configuração: window.__EVO_CFG = { panelUrl, apiKey } DEVE estar definido antes do load.
+(function () {
+  if (window.__EVO_MOBILE_LOADED) {
+    // Re-abre o painel se já tiver sido carregado uma vez
+    const existing = document.querySelector(".evo-chat");
+    if (existing) { existing.remove(); }
+    setTimeout(() => window.__EVO_MOBILE_OPEN && window.__EVO_MOBILE_OPEN(), 50);
+    return;
+  }
+  window.__EVO_MOBILE_LOADED = true;
+
+  const CFG = window.__EVO_CFG || {};
+  if (!CFG.panelUrl || !CFG.apiKey) {
+    alert("Bookmarklet sem configuração. Refaça em /mobile-bookmarklet.");
+    return;
+  }
+  const PANEL = CFG.panelUrl.replace(/\/$/, "");
+  const API_KEY = CFG.apiKey;
+
+  // ---------- CSS ----------
+  const css = `
+.evo-chat{position:fixed;inset:auto 0 0 0;width:100%;height:88vh;max-height:88vh;background:#fff;border-top:1px solid #e2e8f0;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(15,23,42,.25);z-index:2147483647;display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:13px;color:#1f2937;overflow:hidden}
+.evo-chat.min{height:auto !important}
+.evo-chat.min>*:not(.evo-chat-header){display:none !important}
+.evo-chat-header{padding:12px 14px;background:linear-gradient(135deg,#5a7e5f,#3d5841);color:#fff;display:flex;justify-content:space-between;align-items:center;border-radius:16px 16px 0 0;user-select:none}
+.evo-chat-header strong{font-size:14px}
+.evo-chat-paciente{display:block;width:100%;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);border-radius:6px;font-size:12px;color:#fff;outline:none}
+.evo-chat-paciente::placeholder{color:rgba(255,255,255,.65)}
+.evo-chat-header button{width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.15);border:0;border-radius:6px;color:#fff;font-size:16px;cursor:pointer;margin-left:4px}
+.evo-chat-sig{background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569}
+.evo-chat-sig>summary{list-style:none;cursor:pointer;padding:8px 14px;display:flex;align-items:center;justify-content:space-between}
+.evo-chat-sig>summary::-webkit-details-marker{display:none}
+.evo-chat-sig .evo-sig-body{padding:0 14px 8px;line-height:1.5}
+.evo-edit-ther{font-size:10px;color:#4b6b4f;text-decoration:underline}
+.evo-chat-fields{padding:8px 14px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;font-size:11px;color:#475569;max-height:70px;overflow-y:auto;line-height:1.4}
+.evo-chat-fields b{color:#1e293b}
+.evo-chat-status{display:none;padding:6px 14px;background:#fef9c3;color:#713f12;font-size:11px;border-bottom:1px solid #fde68a}
+.evo-chat-templates{flex:1 1 auto;min-height:160px;border-top:2px solid #4b6b4f;background:#f6faf6;padding:12px 14px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.evo-tpl-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:#1f2937;margin-bottom:12px;padding-bottom:8px;border-bottom:1px dashed #d1d5db}
+.evo-tpl-count{font-weight:600;color:#4b6b4f;font-size:11px;background:#ecfdf5;padding:2px 8px;border-radius:999px;margin-left:6px}
+.evo-tpl-clear{font-size:11px;color:#64748b;text-decoration:none;padding:3px 10px;border-radius:999px;cursor:pointer}
+.evo-tpl-list{display:flex;flex-direction:column;gap:12px}
+.evo-tpl-group-title{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;color:var(--c,#6b7280);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.evo-tpl-group-title::after{content:"";flex:1;height:1px;background:currentColor;opacity:.3}
+.evo-tpl-chips{display:flex;flex-wrap:wrap;gap:6px}
+.evo-tpl-chip{padding:7px 13px;font-size:12px;font-weight:600;border:1.5px solid var(--c,#d1d5db);background:#fff;color:var(--c,#374151);border-radius:999px;cursor:pointer;line-height:1.3;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.evo-tpl-chip.active{background:var(--c,#4b6b4f);border-color:var(--c,#4b6b4f);color:#fff}
+.evo-chat-input{border-top:1px solid #e2e8f0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;background:#fff}
+.evo-chat-input textarea{width:100%;box-sizing:border-box;min-height:56px;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;resize:vertical;outline:none}
+.evo-chat-actions{display:flex;gap:8px}
+.evo-chat-actions button{flex:1;padding:12px;border:0;border-radius:8px;font-weight:600;font-size:13px;font-family:inherit;cursor:pointer}
+.evo-btn-primary{background:linear-gradient(135deg,#5a7e5f,#3d5841);color:#fff}
+.evo-btn-primary[disabled]{opacity:.6}
+.evo-btn-secondary{background:#f1f5f9;color:#1f2937}
+.evo-msg{padding:9px 12px;border-radius:12px;max-width:90%;white-space:pre-wrap;line-height:1.45;margin:4px 0;font-size:12px}
+.evo-msg-assistant{background:#ecfdf5;color:#064e3b;align-self:flex-start;border-bottom-left-radius:3px}
+.evo-msg-user{background:#3d5841;color:#fff;align-self:flex-end;border-bottom-right-radius:3px}
+.evo-msg-system{background:#fef3c7;color:#78350f;align-self:center}
+.evo-chat-msgs{max-height:160px;overflow-y:auto;padding:8px 14px;display:flex;flex-direction:column;background:#fafbfc;border-bottom:1px solid #e2e8f0}
+.evo-tpl-group[data-g="comunicacao"]{--c:#2563eb}.evo-tpl-group[data-g="chegada"]{--c:#d97706}.evo-tpl-group[data-g="abordagem"]{--c:#7c3aed}.evo-tpl-group[data-g="interacao"]{--c:#0d9488}.evo-tpl-group[data-g="participacao"]{--c:#db2777}.evo-tpl-group[data-g="saida"]{--c:#475569}.evo-tpl-group[data-g="recursos"]{--c:#0891b2}.evo-tpl-group[data-g="comportamento"]{--c:#4f46e5}.evo-tpl-group[data-g="respostas"]{--c:#16a34a}.evo-tpl-group[data-g="plano"]{--c:#64748b}.evo-tpl-group[data-g="observacoes"]{--c:#ca8a04}.evo-tpl-group[data-g="proximos"]{--c:#be185d}.evo-tpl-group[data-g="emocional"]{--c:#e11d48}.evo-tpl-group[data-g="vinculo"]{--c:#a21caf}.evo-tpl-group[data-g="musical"]{--c:#0ea5e9}.evo-tpl-group[data-g="sensorial"]{--c:#f97316}.evo-tpl-group[data-g="familia"]{--c:#0d9488}.evo-tpl-group[data-g="encaminhamentos"]{--c:#2563eb}
+`;
+  const styleEl = document.createElement("style");
+  styleEl.textContent = css;
+  document.head.appendChild(styleEl);
+
+  // ---------- Templates (mesmos da extensão) ----------
+  const TEMPLATES = [
+    { grupo:"Comunicação", icone:"💬", key:"comunicacao", itens:[
+      {label:"Paciente verbal", frase:"Paciente apresentou-se de forma verbal, comunicando-se por meio de fala funcional durante a sessão."},
+      {label:"Paciente não-verbal", frase:"Paciente não-verbal, comunicando-se por meio de gestos, expressões faciais e vocalizações."},
+      {label:"Trocas vocais", frase:"Estabeleceu trocas vocais com a terapeuta, alternando emissões em padrão dialógico."},
+      {label:"Uso de CAA (PECS)", frase:"Utilizou recursos de Comunicação Alternativa e Aumentativa (PECS/pranchas) para sustentar a interação."},
+      {label:"Iniciativa comunicativa", frase:"Apresentou iniciativa comunicativa espontânea, dirigindo solicitações e comentários à terapeuta."},
+    ]},
+    { grupo:"Chegada", icone:"🚪", key:"chegada", itens:[
+      {label:"Chegou tranquilo", frase:"Chegou ao atendimento de forma tranquila, calmo e receptivo ao acolhimento inicial."},
+      {label:"Chegou agitado", frase:"Chegou ao atendimento agitado, demonstrando inquietação motora e dificuldade inicial de regulação."},
+      {label:"Chegou sonolento", frase:"Chegou ao atendimento sonolento, com baixo nível de alerta nos primeiros minutos."},
+      {label:"Após troca de medicação", frase:"Familiar relatou troca recente de medicação, observando-se reflexos no comportamento inicial do paciente."},
+      {label:"Após escola/terapia", frase:"Chegou logo após período escolar ou outra terapia, demonstrando sinais de cansaço inicial."},
+      {label:"Queixa física relatada", frase:"Chegou com queixa física relatada pelo responsável, considerada na condução da sessão."},
+    ]},
+    { grupo:"Abordagem", icone:"🎯", key:"abordagem", itens:[
+      {label:"Abordagem ativa", frase:"Foi conduzida abordagem terapêutica ativa, com proposição direta de atividades estruturadas pela terapeuta."},
+      {label:"Abordagem receptiva", frase:"Foi conduzida abordagem terapêutica receptiva, acolhendo as iniciativas e produções espontâneas do paciente."},
+      {label:"Abordagem mista", frase:"Foi adotada abordagem mista, alternando proposições estruturadas e momentos de escuta às iniciativas do paciente."},
+      {label:"Mediada por canção", frase:"A condução da sessão foi mediada principalmente por canções, utilizadas como eixo organizador das atividades."},
+    ]},
+    { grupo:"Interação", icone:"🤝", key:"interacao", itens:[
+      {label:"Boa interação", frase:"Estabeleceu boa interação com a terapeuta, mantendo contato visual e respondendo às propostas de forma engajada."},
+      {label:"Interação moderada", frase:"Apresentou interação moderada, alternando momentos de engajamento com períodos de retraimento."},
+      {label:"Baixa interação", frase:"Apresentou baixa interação durante a sessão, com pouca resposta aos estímulos e às propostas oferecidas."},
+      {label:"Interação intermitente", frase:"Manteve interação intermitente, com janelas curtas de engajamento intercaladas por desconexão."},
+      {label:"Buscou contato físico", frase:"Buscou contato físico com a terapeuta (abraço, colo, toque), utilizando-o como apoio de regulação."},
+    ]},
+    { grupo:"Participação", icone:"🎵", key:"participacao", itens:[
+      {label:"Boa participação", frase:"Demonstrou boa participação nas atividades propostas, envolvendo-se de forma colaborativa do início ao fim."},
+      {label:"Resistência a propostas", frase:"Apresentou resistência a algumas propostas, sendo necessário ajustar o ritmo e oferecer alternativas."},
+      {label:"Respondeu bem aos recursos musicais", frase:"Respondeu positivamente aos recursos musicais utilizados, com engajamento corporal e vocal."},
+      {label:"Participação flutuante", frase:"Apresentou participação flutuante ao longo da sessão, alternando momentos de engajamento e dispersão."},
+      {label:"Liderou momento da sessão", frase:"Assumiu protagonismo em momento da sessão, propondo atividade ou conduzindo a escolha musical."},
+    ]},
+    { grupo:"Recursos", icone:"🎼", key:"recursos", itens:[
+      {label:"Instrumentos melódicos", frase:"Foram utilizados instrumentos melódicos (teclado e violão) como recurso principal de mediação na sessão."},
+      {label:"Percussão", frase:"Foram utilizados instrumentos de percussão (tambor, chocalho e ovinho), favorecendo exploração rítmica e corporal."},
+      {label:"Canções de referência", frase:"Foram utilizadas canções de referência da playlist personalizada do paciente como suporte para engajamento e regulação."},
+      {label:"Recursos visuais", frase:"Foram utilizados recursos visuais (figuras e apoio com PECS) para sustentar a comunicação durante a sessão."},
+      {label:"Recursos corporais", frase:"Foram utilizados recursos corporais, com propostas de movimento e dança integradas à música."},
+    ]},
+    { grupo:"Comportamento", icone:"🧠", key:"comportamento", itens:[
+      {label:"Bem regulado", frase:"Manteve-se bem regulado durante toda a sessão, com bom nível de organização sensorial e emocional."},
+      {label:"Episódios de desregulação", frase:"Apresentou episódios de desregulação ao longo da sessão, necessitando suporte da terapeuta para retorno ao estado regulado."},
+      {label:"Auto-regulação com apoio", frase:"Conseguiu se auto-regular com apoio da terapeuta e dos recursos musicais oferecidos."},
+      {label:"Estereotipias presentes", frase:"Apresentou estereotipias motoras e/ou vocais ao longo da sessão, com intensidade compatível com seu padrão habitual."},
+      {label:"Comportamento opositor", frase:"Apresentou comportamento opositor pontual diante de propostas específicas, manejado com flexibilização da atividade."},
+    ]},
+    { grupo:"Respostas", icone:"🌱", key:"respostas", itens:[
+      {label:"Boa resposta", frase:"Apresentou boa resposta às intervenções terapêuticas propostas, com participação efetiva."},
+      {label:"Resposta parcial", frase:"Apresentou resposta parcial às intervenções, engajando-se em parte das propostas."},
+      {label:"Avanço x sessão anterior", frase:"Demonstrou avanço em relação à sessão anterior, com ampliação de respostas e iniciativas."},
+      {label:"Manutenção do nível", frase:"Manteve o nível de desempenho observado nas sessões anteriores, sem mudanças significativas."},
+      {label:"Resposta inconsistente", frase:"Apresentou respostas inconsistentes entre os blocos da sessão, com variação no engajamento."},
+    ]},
+    { grupo:"Plano aplicado", icone:"📋", key:"plano", itens:[
+      {label:"Plano integral", frase:"O plano terapêutico previsto para a sessão foi seguido integralmente."},
+      {label:"Plano adaptado", frase:"O plano terapêutico foi adaptado durante a sessão conforme as respostas e necessidades do paciente."},
+      {label:"Improviso musical livre", frase:"Foi priorizado o improviso musical livre como eixo da sessão."},
+      {label:"Canção estruturada", frase:"Foi priorizado o uso de canção estruturada como eixo da sessão."},
+    ]},
+    { grupo:"Estado emocional", icone:"😊", key:"emocional", itens:[
+      {label:"Humor estável", frase:"Apresentou humor estável e eutímico ao longo de toda a sessão."},
+      {label:"Humor lábil/irritável", frase:"Apresentou humor lábil, com momentos de irritabilidade e oscilações afetivas."},
+      {label:"Riso e prazer", frase:"Demonstrou riso espontâneo e expressões de prazer diante das atividades propostas."},
+      {label:"Apatia", frase:"Apresentou apatia e baixa expressividade emocional ao longo da sessão."},
+      {label:"Ansiedade observável", frase:"Apresentou sinais observáveis de ansiedade, manejados com recursos de regulação musical."},
+    ]},
+    { grupo:"Próximos objetivos", icone:"🎯", key:"proximos", itens:[
+      {label:"Trabalhar turno", frase:"Manter o trabalho de turno (esperar a vez e responder) por meio de jogos musicais."},
+      {label:"Ampliar repertório", frase:"Ampliar o repertório de canções utilizado em sessão, incluindo novas referências do paciente."},
+      {label:"Regulação via música", frase:"Trabalhar estratégias de regulação emocional mediadas pela música."},
+      {label:"Tempo de permanência", frase:"Ampliar o tempo de permanência sustentada em uma mesma atividade musical."},
+    ]},
+    { grupo:"Saída", icone:"👋", key:"saida", itens:[
+      {label:"Saiu tranquilo", frase:"Encerrou a sessão de forma tranquila, regulado e organizado para a transição."},
+      {label:"Saiu agitado", frase:"Encerrou a sessão ainda agitado, necessitando apoio para a transição para o ambiente externo."},
+      {label:"Saiu regulado/sorridente", frase:"Encerrou a sessão sorridente e regulado, demonstrando bem-estar ao final do atendimento."},
+    ]},
+  ];
+
+  const SIG_RX = /(assinatura|assinar|signature|rodap[ée]|conselho|\bcrp\b|\bcrm\b|\bcro\b|\bcpf\b|registro|especialidade|terapeuta|profissional|respons[áa]vel|psic[óo]log[oa]|^nome$|nome\s*completo|data)/i;
+  const isSig = (n) => SIG_RX.test(n || "");
+
+  // ---------- helpers ----------
+  function setNativeValue(el, v) {
+    if (el.getAttribute && el.getAttribute("contenteditable") === "true") {
+      el.focus(); el.innerText = v;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("blur", { bubbles: true }));
+      return;
+    }
+    const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+    setter.call(el, v);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    el.dispatchEvent(new Event("blur", { bubbles: true }));
+  }
+  function normalize(s) {
+    return (s||"").toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+  }
+  function esc(s) { return (s||"").replace(/[&<>"]/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+  const pad = (n)=>String(n).padStart(2,"0");
+  function dataBR() { const d=new Date(); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; }
+
+  function detectPatient() {
+    const hs = Array.from(document.querySelectorAll("h1,h2,h3,[class*='nome'],[class*='paciente']"));
+    for (const h of hs) {
+      const t = (h.innerText||"").trim();
+      if (t && /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{6,}/.test(t.split("\n")[0])) return t.split("\n")[0].trim();
+    }
+    const lines = document.body.innerText.split("\n").map(s=>s.trim()).filter(Boolean);
+    return lines.find(l => /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-ZÁÉÍÓÚÂÊÔÃÕÇ ]{5,}$/.test(l)) || "";
+  }
+  function extractIdFromUrl() { const m=location.pathname.match(/\/(\d{5,})/); return m?m[1]:null; }
+
+  function isVisible(el){ if(!el||el.offsetParent===null) return false; const r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
+  function isChrome(el){ return !!el.closest(".evo-chat"); }
+
+  async function preScroll() {
+    const sc = document.scrollingElement || document.documentElement;
+    const orig = sc.scrollTop, max = sc.scrollHeight;
+    for (let y=0;y<=max;y+=Math.max(300,window.innerHeight-80)) { sc.scrollTop=y; await new Promise(r=>setTimeout(r,90)); }
+    sc.scrollTop = orig;
+    await new Promise(r=>setTimeout(r,150));
+  }
+
+  function clean(s){ return (s||"").replace(/\*/g,"").replace(/\(obrigat[óo]rio\)/gi,"").replace(/obrigat[óo]rio/gi,"").replace(/\s+/g," ").trim(); }
+
+  function findLabel(el) {
+    if (el.id) {
+      const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      if (lab) return clean(lab.innerText);
+    }
+    // sobe procurando label curto antes do input
+    let cur = el.parentElement;
+    for (let d=0; d<8 && cur; d++) {
+      let sib = el.previousElementSibling || cur.previousElementSibling;
+      while (sib) {
+        const t = (sib.innerText||"").trim().split("\n")[0].trim();
+        const c = clean(t);
+        if (c && c.length<=160 && !/^(obrigat[óo]rio|opcional|texto|campo|sele[çc][aã]o|pesquisar|buscar)$/i.test(c) && !/^[\d\s\-\/.:]+$/.test(c)) return c;
+        sib = sib.previousElementSibling;
+      }
+      cur = cur.parentElement;
+    }
+    if (el.getAttribute("aria-label")) return clean(el.getAttribute("aria-label"));
+    if (el.placeholder) return clean(el.placeholder);
+    return null;
+  }
+
+  function detectFields() {
+    const all = Array.from(document.querySelectorAll("textarea, input[type='text'], input:not([type]), [contenteditable='true']"));
+    const fields = [];
+    const seen = new Set();
+    for (const el of all) {
+      if (el.disabled || el.readOnly) continue;
+      if (isChrome(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) continue;
+      let label = findLabel(el);
+      if (!label && (el.tagName==="TEXTAREA"||el.getAttribute("contenteditable")==="true")) label = `Campo ${fields.length+1}`;
+      if (!label) continue;
+      const k = normalize(label);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      fields.push({ nome: label, el });
+    }
+    return fields;
+  }
+
+  // ---------- API calls ----------
+  async function apiPost(path, body) {
+    const r = await fetch(PANEL + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+      body: JSON.stringify(body),
+    });
+    const text = await r.text();
+    let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0,200) }; }
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    return data;
+  }
+  async function apiGet(path) {
+    const r = await fetch(PANEL + path, { headers: { "x-api-key": API_KEY } });
+    const text = await r.text();
+    let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0,200) }; }
+    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+    return data;
+  }
+
+  // ---------- preencher campos da assinatura ----------
+  function fillTherapist(t) {
+    if (!t) return 0;
+    const map = [
+      { val: t.nome, rx: /(nome\s*completo|terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente|assinatura.*nome|^nome$)/i },
+      { val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro)/i },
+      { val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
+      { val: "__DATE__", rx: /(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|data.*sess|data.*atend)/i },
+    ];
+    const flds = detectFields();
+    const used = new Set();
+    let n = 0;
+    for (const m of map) {
+      if (!m.val) continue;
+      for (const f of flds) {
+        if (used.has(f.el)) continue;
+        if (m.rx.test(f.nome)) {
+          try {
+            let v = m.val;
+            if (v === "__DATE__") {
+              v = dataBR();
+              if (f.el.tagName === "INPUT" && (f.el.type||"").toLowerCase() === "date") {
+                const d = new Date(); v = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+              }
+            }
+            setNativeValue(f.el, v); used.add(f.el); n++;
+          } catch {}
+          break;
+        }
+      }
+    }
+    // campo "assinatura" consolidado
+    const lines = [t.nome, t.conselho, t.especialidade, `Data: ${dataBR()}`].filter(Boolean);
+    if (lines.length) {
+      for (const f of flds) {
+        if (used.has(f.el)) continue;
+        if (!/assinatura|assinar|rodap[ée]/i.test(f.nome)) continue;
+        const cur = (f.el.value ?? f.el.innerText ?? "").trim();
+        if (cur) continue;
+        try { setNativeValue(f.el, lines.join("\n")); used.add(f.el); n++; } catch {}
+      }
+    }
+    return n;
+  }
+
+  function fillFields(camposResp, fields) {
+    let n = 0;
+    for (const f of fields) {
+      if (isSig(f.nome)) continue;
+      const k = normalize(f.nome);
+      let val = null;
+      for (const [kk, vv] of Object.entries(camposResp)) {
+        if (isSig(kk)) continue;
+        const nk = normalize(kk);
+        if (nk === k || nk.includes(k) || k.includes(nk)) { val = vv; break; }
+      }
+      if (val) { try { setNativeValue(f.el, val); n++; } catch {} }
+    }
+    return n;
+  }
+
+  // ---------- panel ----------
+  let state = { pacienteNome:"", fields:[], terapeuta:null, selected:new Set(), msgs:[] };
+
+  async function openChat() {
+    const existing = document.querySelector(".evo-chat");
+    if (existing) { existing.remove(); }
+
+    state.pacienteNome = detectPatient();
+    state.pacienteIdExterno = extractIdFromUrl();
+    state.selected = new Set();
+    state.msgs = [{ role:"assistant", content:"Selecione os chips abaixo e/ou descreva a sessão. Eu preencho os campos automaticamente." }];
+
+    const panel = document.createElement("div");
+    panel.className = "evo-chat";
+    panel.innerHTML = `
+      <div class="evo-chat-header">
+        <div style="flex:1;min-width:0">
+          <strong>🌱 Agente de Evolução</strong>
+          <input class="evo-chat-paciente" placeholder="Nome do paciente" value="${esc(state.pacienteNome)}" />
+        </div>
+        <div style="display:flex;align-items:center">
+          <button class="evo-redetect" title="Re-detectar">↻</button>
+          <button class="evo-min" title="Minimizar">—</button>
+          <button class="evo-close" title="Fechar">×</button>
+        </div>
+      </div>
+      <details class="evo-chat-sig" open>
+        <summary>
+          <span>✍️ Assinatura</span>
+          <a class="evo-edit-ther" href="${PANEL}/configuracoes" target="_blank">editar</a>
+        </summary>
+        <div class="evo-sig-body"><i style="color:#6b7280">Carregando…</i></div>
+      </details>
+      <div class="evo-chat-fields">Detectando campos…</div>
+      <div class="evo-chat-status"></div>
+      <div class="evo-chat-msgs"></div>
+      <div class="evo-chat-templates">
+        <div class="evo-tpl-head">
+          <span>⚡ Templates rápidos<span class="evo-tpl-count"></span></span>
+          <a class="evo-tpl-clear">limpar</a>
+        </div>
+        <div class="evo-tpl-list">
+          ${TEMPLATES.map(g=>`
+            <div class="evo-tpl-group" data-g="${g.key}">
+              <div class="evo-tpl-group-title">${g.icone} ${esc(g.grupo)}</div>
+              <div class="evo-tpl-chips">
+                ${g.itens.map(it=>`<button type="button" class="evo-tpl-chip" data-f="${esc(it.frase)}">${esc(it.label)}</button>`).join("")}
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>
+      <div class="evo-chat-input">
+        <textarea placeholder="Opcional: observações adicionais (intercorrências, recursos específicos...)"></textarea>
+        <div class="evo-chat-actions">
+          <button class="evo-btn-secondary evo-clear">Limpar</button>
+          <button class="evo-btn-primary evo-send">✨ Gerar e preencher</button>
+        </div>
+      </div>`;
+    document.body.appendChild(panel);
+
+    const $ = (s)=>panel.querySelector(s);
+    const sigBody = $(".evo-sig-body");
+    const fieldsBox = $(".evo-chat-fields");
+    const statusEl = $(".evo-chat-status");
+    const msgsBox = $(".evo-chat-msgs");
+    const textarea = $("textarea");
+    const sendBtn = $(".evo-send");
+    const countEl = $(".evo-tpl-count");
+
+    function renderMsgs() {
+      msgsBox.innerHTML = "";
+      for (const m of state.msgs) {
+        const d = document.createElement("div");
+        d.className = "evo-msg evo-msg-" + m.role;
+        d.textContent = m.content;
+        msgsBox.appendChild(d);
+      }
+      msgsBox.scrollTop = msgsBox.scrollHeight;
+    }
+    function setStatus(t) {
+      if (!t) { statusEl.style.display="none"; statusEl.textContent=""; return; }
+      statusEl.style.display="block"; statusEl.textContent=t;
+    }
+    function renderSig(t) {
+      if (!t || (!t.nome && !t.conselho && !t.especialidade)) {
+        sigBody.innerHTML = `<i style="color:#6b7280">Nenhum dado. <a href="${PANEL}/configuracoes" target="_blank" style="color:#047857">configurar</a></i><br>📅 ${dataBR()}`;
+        return;
+      }
+      sigBody.innerHTML = [
+        t.nome ? `👤 ${esc(t.nome)}` : "",
+        t.conselho ? `🪪 ${esc(t.conselho)}` : "",
+        t.especialidade ? `🎯 ${esc(t.especialidade)}` : "",
+        `📅 ${dataBR()}`,
+      ].filter(Boolean).join("<br>");
+    }
+    function renderFields() {
+      if (!state.fields.length) fieldsBox.innerHTML = `<b>Nenhum campo detectado.</b> Role a tela do atendimento e toque ↻.`;
+      else fieldsBox.innerHTML = `<b>${state.fields.length} campo(s):</b> ${state.fields.map(f=>esc(f.nome)).join(" · ")}`;
+    }
+    function updateChips() {
+      panel.querySelectorAll(".evo-tpl-chip").forEach(c=>{
+        c.classList.toggle("active", state.selected.has(c.dataset.f));
+      });
+      const n = state.selected.size;
+      countEl.textContent = n ? ` (${n})` : "";
+    }
+
+    $(".evo-close").onclick = () => panel.remove();
+    $(".evo-min").onclick = () => panel.classList.toggle("min");
+    $(".evo-redetect").onclick = async () => { fieldsBox.innerHTML="Rolando…"; await preScroll(); state.fields = detectFields(); renderFields(); };
+    $(".evo-tpl-clear").onclick = (e) => { e.preventDefault(); state.selected.clear(); updateChips(); };
+    panel.querySelectorAll(".evo-tpl-chip").forEach(c=>{
+      c.onclick = (e) => { e.preventDefault();
+        if (state.selected.has(c.dataset.f)) state.selected.delete(c.dataset.f);
+        else state.selected.add(c.dataset.f);
+        updateChips();
+      };
+    });
+    $(".evo-clear").onclick = () => { state.selected.clear(); textarea.value=""; updateChips(); };
+
+    sendBtn.onclick = async () => {
+      const nomeManual = $(".evo-chat-paciente").value.trim();
+      if (nomeManual) state.pacienteNome = nomeManual;
+      if (!state.pacienteNome) { alert("Informe o nome do paciente."); return; }
+      if (!state.fields.length) { alert("Nenhum campo detectado. Toque ↻ depois de abrir a tela de evolução."); return; }
+      const tpls = Array.from(state.selected);
+      const extra = textarea.value.trim();
+      if (!tpls.length && !extra) { alert("Selecione templates ou descreva a sessão."); return; }
+
+      const partes = [];
+      if (tpls.length) partes.push("Observações da sessão:\n- " + tpls.join("\n- "));
+      if (extra) partes.push(extra);
+      const msg = partes.join("\n\n");
+      state.msgs.push({ role:"user", content: msg });
+      renderMsgs();
+
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Gerando…";
+      setStatus("Enviando para IA…");
+
+      try {
+        const data = await apiPost("/api/public/extension/chat-generate", {
+          pacienteNome: state.pacienteNome,
+          pacienteIdExterno: state.pacienteIdExterno,
+          mensagens: state.msgs.filter(m=>m.role!=="system"),
+          campos: state.fields.filter(f=>!isSig(f.nome)).map(f=>f.nome),
+        });
+        const ther = data.terapeuta || {};
+        state.terapeuta = ther;
+        renderSig(ther);
+        const nT = fillTherapist(ther);
+        const nF = fillFields(data.campos || {}, state.fields);
+        state.msgs.push({ role:"assistant", content:`Preenchi ${nF} campo(s) + ${nT} da assinatura. Revise antes de salvar.` });
+        textarea.value = "";
+        state.selected.clear();
+        updateChips();
+      } catch (e) {
+        state.msgs.push({ role:"system", content: "Erro: " + (e.message || e) });
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "✨ Gerar e preencher";
+        setStatus("");
+        renderMsgs();
+      }
+    };
+
+    renderMsgs();
+    fieldsBox.innerHTML = "Rolando para detectar campos…";
+    await preScroll();
+    state.fields = detectFields();
+    renderFields();
+    updateChips();
+
+    // assinatura
+    try {
+      const r = await apiGet("/api/public/extension/therapist");
+      if (r.terapeuta) {
+        state.terapeuta = r.terapeuta;
+        renderSig(r.terapeuta);
+        fillTherapist(r.terapeuta);
+      } else renderSig(null);
+    } catch (e) { renderSig(null); }
+  }
+
+  window.__EVO_MOBILE_OPEN = openChat;
+  openChat();
+})();
