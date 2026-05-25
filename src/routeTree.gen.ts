@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PacientesRouteImport } from './routes/pacientes'
+import { Route as MobileRouteImport } from './routes/mobile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as IndexRouteImport } from './routes/index'
@@ -22,6 +23,11 @@ import { Route as ApiPublicExtensionChatGenerateRouteImport } from './routes/api
 const PacientesRoute = PacientesRouteImport.update({
   id: '/pacientes',
   path: '/pacientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MobileRoute = MobileRouteImport.update({
+  id: '/mobile',
+  path: '/mobile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
+  '/mobile': typeof MobileRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
+  '/mobile': typeof MobileRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/login': typeof LoginRoute
+  '/mobile': typeof MobileRoute
   '/pacientes': typeof PacientesRouteWithChildren
   '/pacientes/$id': typeof PacientesIdRoute
   '/api/public/extension/chat-generate': typeof ApiPublicExtensionChatGenerateRoute
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/'
     | '/configuracoes'
     | '/login'
+    | '/mobile'
     | '/pacientes'
     | '/pacientes/$id'
     | '/api/public/extension/chat-generate'
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/'
     | '/configuracoes'
     | '/login'
+    | '/mobile'
     | '/pacientes'
     | '/pacientes/$id'
     | '/api/public/extension/chat-generate'
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/'
     | '/configuracoes'
     | '/login'
+    | '/mobile'
     | '/pacientes'
     | '/pacientes/$id'
     | '/api/public/extension/chat-generate'
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   LoginRoute: typeof LoginRoute
+  MobileRoute: typeof MobileRoute
   PacientesRoute: typeof PacientesRouteWithChildren
   ApiPublicExtensionChatGenerateRoute: typeof ApiPublicExtensionChatGenerateRoute
   ApiPublicExtensionConfirmRoute: typeof ApiPublicExtensionConfirmRoute
@@ -157,6 +170,13 @@ declare module '@tanstack/react-router' {
       path: '/pacientes'
       fullPath: '/pacientes'
       preLoaderRoute: typeof PacientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mobile': {
+      id: '/mobile'
+      path: '/mobile'
+      fullPath: '/mobile'
+      preLoaderRoute: typeof MobileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -234,6 +254,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   LoginRoute: LoginRoute,
+  MobileRoute: MobileRoute,
   PacientesRoute: PacientesRouteWithChildren,
   ApiPublicExtensionChatGenerateRoute: ApiPublicExtensionChatGenerateRoute,
   ApiPublicExtensionConfirmRoute: ApiPublicExtensionConfirmRoute,
@@ -243,3 +264,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
