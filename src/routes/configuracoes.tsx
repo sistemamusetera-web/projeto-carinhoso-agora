@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Key, Plus, Trash2, Copy, Download, Save } from "lucide-react";
+import { Key, Plus, Trash2, Copy, Download, Save, Smartphone } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/configuracoes")({
@@ -150,6 +151,41 @@ function ConfigPage() {
             Após baixar: descompacte → abra <code>chrome://extensions</code> → ative o "Modo desenvolvedor" → "Carregar sem compactação" → selecione a pasta.
           </p>
         </Card>
+
+        <Card className="p-6">
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-[#4b6b4f]/10 p-2.5">
+              <Smartphone className="h-5 w-5 text-[#4b6b4f]" />
+            </div>
+            <div className="flex-1">
+              <h2 className="font-display text-xl font-semibold">Versão mobile (celular)</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Abra no seu celular para gerar evoluções com IA e copiar/colar no app do Clínica nas Nuvens.
+                Funciona em iOS e Android, sem instalar nada.
+              </p>
+              <Link
+                to="/mobile"
+                className="mt-3 inline-flex items-center gap-2 rounded-md bg-[#4b6b4f] px-4 py-2 text-sm font-medium text-white hover:bg-[#3d5841]"
+              >
+                <Smartphone className="h-4 w-4" /> Abrir versão mobile
+              </Link>
+              <div className="mt-4 space-y-2 text-xs text-muted-foreground">
+                <p>
+                  <strong>Instalar como app no celular:</strong>
+                </p>
+                <p>
+                  • <strong>iPhone (Safari):</strong> abra <code>/mobile</code>, toque em Compartilhar
+                  e em "Adicionar à Tela de Início".
+                </p>
+                <p>
+                  • <strong>Android (Chrome):</strong> abra <code>/mobile</code>, toque no menu
+                  (⋮) e em "Instalar app" ou "Adicionar à tela inicial".
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
 
         <Card className="p-6">
           <div className="flex items-center justify-between">
