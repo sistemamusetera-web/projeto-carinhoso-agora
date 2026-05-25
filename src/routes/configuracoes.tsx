@@ -163,12 +163,20 @@ function ConfigPage() {
                 Abra no seu celular para gerar evoluções com IA e copiar/colar no app do Clínica nas Nuvens.
                 Funciona em iOS e Android, sem instalar nada.
               </p>
-              <Link
-                to="/mobile"
-                className="mt-3 inline-flex items-center gap-2 rounded-md bg-[#4b6b4f] px-4 py-2 text-sm font-medium text-white hover:bg-[#3d5841]"
-              >
-                <Smartphone className="h-4 w-4" /> Abrir versão mobile
-              </Link>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  to="/mobile"
+                  className="inline-flex items-center gap-2 rounded-md bg-[#4b6b4f] px-4 py-2 text-sm font-medium text-white hover:bg-[#3d5841]"
+                >
+                  <Smartphone className="h-4 w-4" /> Versão mobile (copiar/colar)
+                </Link>
+                <Link
+                  to="/mobile-bookmarklet"
+                  className="inline-flex items-center gap-2 rounded-md border border-[#4b6b4f] bg-white px-4 py-2 text-sm font-medium text-[#4b6b4f] hover:bg-[#4b6b4f]/5"
+                >
+                  📑 Bookmarklet iPhone (auto-preenchimento)
+                </Link>
+              </div>
               <div className="mt-4 space-y-2 text-xs text-muted-foreground">
                 <p>
                   <strong>Instalar como app no celular:</strong>
