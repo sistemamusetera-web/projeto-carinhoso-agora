@@ -676,27 +676,38 @@
         renderSig(ther);
         const nT = fillTherapist(ther).n;
 
-        // Re-detecta DE NOVO antes de preencher (campos podem ter aparecido)
-        try { await preScroll(); } catch {}
-        state.fields = detectFields();
-        renderFields();
-
-        let nF = fillFields(data.campos || {}, state.fields);
-        // Se nada bateu, tenta de novo após pequena espera (lazy render)
-        if (!nF && state.fields.length) {
-          await new Promise(r=>setTimeout(r,400));
+        // Múltiplas passadas: rola, detecta, ativa editores lazy e preenche.
+        // Mantém os já preenchidos e tenta novamente os que faltaram.
+        setStatus("Preenchendo campos do formulário…");
+        const respCampos = data.campos || {};
+        const blocos = Object.keys(respCampos).length;
+        let nF = 0;
+        let totalCampos = 0;
+        const remaining = { ...respCampos };
+        for (let pass = 0; pass < 4; pass++) {
+          try { await preScroll(); } catch {}
           state.fields = detectFields();
-          nF = fillFields(data.campos || {}, state.fields);
+          renderFields();
+          totalCampos = state.fields.filter(f=>!isSig(f.nome)).length;
+          const got = fillFields(remaining, state.fields);
+          nF += got;
+          // remove do "remaining" o que já bateu (heurística: marca por inclusão)
+          if (got) {
+            for (const f of state.fields) {
+              const k = normalize(f.nome);
+              for (const kk of Object.keys(remaining)) {
+                const nk = normalize(kk);
+                if (nk === k || nk.includes(k) || k.includes(nk)) { delete remaining[kk]; break; }
+              }
+            }
+          }
+          if (!Object.keys(remaining).length) break;
+          await new Promise(r=>setTimeout(r,350));
         }
 
-        const blocos = Object.keys(data.campos||{}).length;
         const resumo = nF
-          ? `✅ Preenchi ${nF} de ${state.fields.filter(f=>!isSig(f.nome)).length} campo(s) do formulário + ${nT} da assinatura.`
+          ? `✅ Preenchi ${nF} de ${totalCampos} campo(s) do formulário + ${nT} da assinatura.`
           : `⚠️ IA gerou ${blocos} bloco(s) e a evolução foi salva no histórico, mas nenhum campo bateu com o formulário. Abra a aba de evolução, toque ↻ e clique novamente. Campos detectados: ${state.fields.map(f=>f.nome).join(" · ") || "nenhum"}.`;
-        state.msgs.push({ role:"assistant", content: resumo });
-        textarea.value = "";
-        state.selected.clear();
-        updateChips();
         state.msgs.push({ role:"assistant", content: resumo });
         textarea.value = "";
         state.selected.clear();
