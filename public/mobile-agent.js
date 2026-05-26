@@ -579,44 +579,72 @@
     });
     $(".evo-clear").onclick = () => { state.selected.clear(); textarea.value=""; updateChips(); };
 
-    sendBtn.onclick = async () => {
-      const nomeManual = $(".evo-chat-paciente").value.trim();
-      if (nomeManual) state.pacienteNome = nomeManual;
-      if (!state.pacienteNome) { alert("Informe o nome do paciente."); return; }
-      if (!state.fields.length) { alert("Nenhum campo detectado. Toque ↻ depois de abrir a tela de evolução."); return; }
-      const tpls = Array.from(state.selected);
-      const extra = textarea.value.trim();
-      if (!tpls.length && !extra) { alert("Selecione templates ou descreva a sessão."); return; }
-
-      const partes = [];
-      if (tpls.length) partes.push("Observações da sessão:\n- " + tpls.join("\n- "));
-      if (extra) partes.push(extra);
-      const msg = partes.join("\n\n");
-      state.msgs.push({ role:"user", content: msg });
-      renderMsgs();
-
-      sendBtn.disabled = true;
-      sendBtn.textContent = "Gerando…";
-      setStatus("Enviando para IA…");
-
+    sendBtn.onclick = async (ev) => {
+      try { ev && ev.preventDefault && ev.preventDefault(); } catch {}
       try {
+        const nomeManual = $(".evo-chat-paciente").value.trim();
+        if (nomeManual) state.pacienteNome = nomeManual;
+        if (!state.pacienteNome) {
+          state.msgs.push({ role:"system", content:"⚠️ Informe o nome do paciente no topo do painel." });
+          renderMsgs(); return;
+        }
+
+        // Re-detecta campos automaticamente se vazio (sem bloquear)
+        if (!state.fields.length) {
+          setStatus("Detectando campos…");
+          try { await preScroll(); } catch {}
+          state.fields = detectFields();
+          renderFields();
+        }
+
+        const tpls = Array.from(state.selected);
+        const extra = textarea.value.trim();
+        if (!tpls.length && !extra) {
+          state.msgs.push({ role:"system", content:"⚠️ Selecione ao menos um chip ou escreva uma observação." });
+          renderMsgs(); return;
+        }
+
+        // Campos a preencher: os detectados (sem assinatura). Se nada detectado, usa um conjunto padrão para que a IA gere algo útil.
+        const camposParaIA = state.fields.length
+          ? state.fields.filter(f=>!isSig(f.nome)).map(f=>f.nome)
+          : ["Descrição da sessão","Recursos utilizados","Comportamento","Respostas terapêuticas","Participação","Plano aplicado","Observações","Próximos objetivos"];
+
+        if (!camposParaIA.length) {
+          state.msgs.push({ role:"system", content:"⚠️ Só campos de assinatura detectados. Abra a aba de evolução e toque ↻." });
+          renderMsgs(); return;
+        }
+
+        const partes = [];
+        if (tpls.length) partes.push("Observações da sessão:\n- " + tpls.join("\n- "));
+        if (extra) partes.push(extra);
+        const msg = partes.join("\n\n");
+        state.msgs.push({ role:"user", content: msg });
+        renderMsgs();
+
+        sendBtn.disabled = true;
+        sendBtn.textContent = "Gerando…";
+        setStatus("Enviando para IA… (pode levar até 1 min)");
+
         const data = await apiPost("/api/public/extension/chat-generate", {
           pacienteNome: state.pacienteNome,
           pacienteIdExterno: state.pacienteIdExterno,
           mensagens: state.msgs.filter(m=>m.role!=="system"),
-          campos: state.fields.filter(f=>!isSig(f.nome)).map(f=>f.nome),
+          campos: camposParaIA,
         });
         const ther = data.terapeuta || {};
         state.terapeuta = ther;
         renderSig(ther);
         const nT = fillTherapist(ther).n;
-        const nF = fillFields(data.campos || {}, state.fields);
-        state.msgs.push({ role:"assistant", content:`Preenchi ${nF} campo(s) + ${nT} da assinatura. Revise antes de salvar.` });
+        const nF = state.fields.length ? fillFields(data.campos || {}, state.fields) : 0;
+        const resumo = nF
+          ? `✅ Preenchi ${nF} campo(s) + ${nT} da assinatura. Revise antes de salvar.`
+          : `✅ Evolução gerada (${Object.keys(data.campos||{}).length} blocos) e salva no histórico. Nenhum campo do formulário foi detectado para preenchimento direto — abra a aba de evolução, toque ↻ e clique novamente.`;
+        state.msgs.push({ role:"assistant", content: resumo });
         textarea.value = "";
         state.selected.clear();
         updateChips();
       } catch (e) {
-        state.msgs.push({ role:"system", content: "Erro: " + (e.message || e) });
+        state.msgs.push({ role:"system", content: "❌ Erro: " + (e && e.message ? e.message : e) });
       } finally {
         sendBtn.disabled = false;
         sendBtn.textContent = "✨ Gerar e preencher";
