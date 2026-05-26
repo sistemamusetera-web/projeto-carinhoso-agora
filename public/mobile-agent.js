@@ -624,8 +624,13 @@
     });
     $(".evo-clear").onclick = () => { state.selected.clear(); textarea.value=""; updateChips(); };
 
-    sendBtn.onclick = async (ev) => {
+    const handleSend = async (ev) => {
       try { ev && ev.preventDefault && ev.preventDefault(); } catch {}
+      // Feedback imediato: prova que o clique chegou
+      try {
+        state.msgs.push({ role:"system", content:"▶️ Clique recebido. Processando…" });
+        renderMsgs();
+      } catch {}
       try {
         const nomeManual = $(".evo-chat-paciente").value.trim();
         if (nomeManual) state.pacienteNome = nomeManual;
