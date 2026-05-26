@@ -274,7 +274,18 @@
   }
 
   function detectFields() {
-    const all = Array.from(document.querySelectorAll("textarea, input[type='text'], input:not([type]), [contenteditable='true']"));
+  function collectRoots() {
+    const roots = [document];
+    for (const f of document.querySelectorAll("iframe")) {
+      try { if (f.contentDocument) roots.push(f.contentDocument); } catch {}
+    }
+    return roots;
+  }
+  function detectFields() {
+    const all = [];
+    for (const root of collectRoots()) {
+      try { all.push(...root.querySelectorAll("textarea, input[type='text'], input:not([type]), [contenteditable='true']")); } catch {}
+    }
     const fields = [];
     const seen = new Set();
     for (const el of all) {
