@@ -726,6 +726,15 @@
         renderMsgs();
       }
     };
+    sendBtn.onclick = handleSend;
+    sendBtn.addEventListener("click", handleSend);
+    // iOS Safari às vezes não dispara click confiável — touchend garante
+    let _touched = false;
+    sendBtn.addEventListener("touchend", (e) => {
+      _touched = true;
+      handleSend(e);
+      setTimeout(()=>{ _touched = false; }, 600);
+    }, { passive: false });
 
     renderMsgs();
     fieldsBox.innerHTML = "Rolando para detectar campos…";
