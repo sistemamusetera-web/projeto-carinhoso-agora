@@ -21,9 +21,13 @@
 
   // ---------- CSS ----------
   const css = `
-.evo-chat{position:fixed;inset:auto 0 0 0;width:100%;height:88vh;max-height:88vh;background:#fff;border-top:1px solid #e2e8f0;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(15,23,42,.25);z-index:2147483647;display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:13px;color:#1f2937;overflow:hidden}
-.evo-chat.min{height:auto !important}
-.evo-chat.min>*:not(.evo-chat-header){display:none !important}
+.evo-chat{position:fixed;inset:auto 0 0 0;width:100%;height:var(--evo-h,55vh);max-height:92vh;min-height:120px;background:#fff;border-top:1px solid #e2e8f0;border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(15,23,42,.25);z-index:2147483647;display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:13px;color:#1f2937;overflow:hidden;transition:height .18s ease}
+.evo-chat.min{height:auto !important;min-height:0}
+.evo-chat.min>*:not(.evo-chat-header):not(.evo-grip){display:none !important}
+.evo-chat.dragging{transition:none}
+.evo-grip{height:18px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#5a7e5f,#3d5841);cursor:ns-resize;touch-action:none;border-radius:16px 16px 0 0}
+.evo-grip::before{content:"";width:42px;height:4px;border-radius:999px;background:rgba(255,255,255,.55)}
+.evo-chat .evo-chat-header{border-radius:0}
 .evo-chat-header{padding:12px 14px;background:linear-gradient(135deg,#5a7e5f,#3d5841);color:#fff;display:flex;justify-content:space-between;align-items:center;border-radius:16px 16px 0 0;user-select:none}
 .evo-chat-header strong{font-size:14px}
 .evo-chat-paciente{display:block;width:100%;margin-top:6px;padding:6px 8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);border-radius:6px;font-size:12px;color:#fff;outline:none}
