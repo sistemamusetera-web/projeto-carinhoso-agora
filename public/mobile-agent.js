@@ -589,7 +589,7 @@
         const ther = data.terapeuta || {};
         state.terapeuta = ther;
         renderSig(ther);
-        const nT = fillTherapist(ther);
+        const nT = fillTherapist(ther).n;
         const nF = fillFields(data.campos || {}, state.fields);
         state.msgs.push({ role:"assistant", content:`Preenchi ${nF} campo(s) + ${nT} da assinatura. Revise antes de salvar.` });
         textarea.value = "";
