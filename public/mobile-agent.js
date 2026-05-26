@@ -273,8 +273,18 @@
     return null;
   }
 
+  function collectRoots() {
+    const roots = [document];
+    for (const f of document.querySelectorAll("iframe")) {
+      try { if (f.contentDocument) roots.push(f.contentDocument); } catch {}
+    }
+    return roots;
+  }
   function detectFields() {
-    const all = Array.from(document.querySelectorAll("textarea, input[type='text'], input:not([type]), [contenteditable='true']"));
+    const all = [];
+    for (const root of collectRoots()) {
+      try { all.push(...root.querySelectorAll("textarea, input[type='text'], input:not([type]), [contenteditable='true']")); } catch {}
+    }
     const fields = [];
     const seen = new Set();
     for (const el of all) {
@@ -316,21 +326,26 @@
   }
 
   // ---------- preencher campos da assinatura ----------
+  // retorna {n, missing:[keys]} para que o retry saiba o que falta
   function fillTherapist(t) {
-    if (!t) return 0;
+    const out = { n: 0, missing: [] };
+    if (!t) return out;
     const map = [
-      { val: t.nome, rx: /(nome\s*completo|terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente|assinatura.*nome|^nome$)/i },
-      { val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro|n[uú]mero do conselho)/i },
-      { val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
-      { val: "__DATE__", rx: /(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|data.*sess|data.*atend)/i },
+      { key: "nome", val: t.nome, rx: /(nome\s*completo|terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente|assinatura.*nome|^nome$)/i },
+      { key: "conselho", val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro|n[uú]mero do conselho)/i },
+      { key: "especialidade", val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
+      { key: "data", val: "__DATE__", rx: /(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|data.*sess|data.*atend)/i },
     ];
     const flds = detectFields();
     const used = new Set();
-    let n = 0;
     for (const m of map) {
       if (!m.val) continue;
+      let placed = false;
       for (const f of flds) {
         if (used.has(f.el)) continue;
+        // não sobrescreve se já preenchido
+        const cur = (f.el.value ?? f.el.innerText ?? "").trim();
+        if (cur && m.key !== "data") { if (m.rx.test(f.nome)) { placed = true; used.add(f.el); break; } continue; }
         if (m.rx.test(f.nome)) {
           try {
             let v = m.val;
@@ -340,11 +355,12 @@
                 const d = new Date(); v = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
               }
             }
-            setNativeValue(f.el, v); used.add(f.el); n++;
+            setNativeValue(f.el, v); used.add(f.el); out.n++; placed = true;
           } catch {}
           break;
         }
       }
+      if (!placed && m.val && m.key !== "data") out.missing.push(m.key);
     }
     // campo "assinatura" consolidado
     const lines = [t.nome, t.conselho, t.especialidade, `Data: ${dataBR()}`].filter(Boolean);
@@ -354,11 +370,12 @@
         if (!/assinatura|assinar|rodap[ée]/i.test(f.nome)) continue;
         const cur = (f.el.value ?? f.el.innerText ?? "").trim();
         if (cur) continue;
-        try { setNativeValue(f.el, lines.join("\n")); used.add(f.el); n++; } catch {}
+        try { setNativeValue(f.el, lines.join("\n")); used.add(f.el); out.n++; } catch {}
       }
     }
-    return n;
+    return out;
   }
+
 
   function fillFields(camposResp, fields) {
     let n = 0;
@@ -398,6 +415,7 @@
           <input class="evo-chat-paciente" placeholder="Nome do paciente" value="${esc(state.pacienteNome)}" />
         </div>
         <div style="display:flex;align-items:center">
+          <button class="evo-fill-sig" title="Preencher assinatura">✍️</button>
           <button class="evo-redetect" title="Re-detectar">↻</button>
           <button class="evo-size" title="Alternar tamanho">⇕</button>
           <button class="evo-min" title="Minimizar">—</button>
@@ -532,6 +550,25 @@
     $(".evo-close").onclick = () => panel.remove();
     $(".evo-min").onclick = () => panel.classList.toggle("min");
     $(".evo-redetect").onclick = async () => { fieldsBox.innerHTML="Rolando…"; await preScroll(); state.fields = detectFields(); renderFields(); };
+    $(".evo-fill-sig").onclick = async () => {
+      setStatus("Procurando campos da assinatura…");
+      await preScroll();
+      let t = state.terapeuta;
+      if (!t || (!t.nome && !t.conselho && !t.especialidade)) {
+        try { const r = await apiGet("/api/public/extension/therapist"); t = r.terapeuta; state.terapeuta = t; renderSig(t); } catch {}
+      }
+      if (!t) { setStatus(""); alert("Sem dados do terapeuta em Configurações."); return; }
+      const res = fillTherapist(t);
+      const flds = detectFields().map(f=>f.nome);
+      const sigDetected = flds.filter(n => /nome\s*completo|conselho|cpf|especialidade|assinatura/i.test(n));
+      state.msgs.push({ role:"assistant", content:
+        `Assinatura: preenchi ${res.n} campo(s).` +
+        (res.missing.length ? ` Faltou: ${res.missing.join(", ")}.` : "") +
+        `\nCampos detectados na seção: ${sigDetected.length ? sigDetected.join(" · ") : "nenhum"}.`
+      });
+      renderMsgs();
+      setStatus("");
+    };
     $(".evo-tpl-clear").onclick = (e) => { e.preventDefault(); state.selected.clear(); updateChips(); };
     panel.querySelectorAll(".evo-tpl-chip").forEach(c=>{
       c.onclick = (e) => { e.preventDefault();
@@ -572,7 +609,7 @@
         const ther = data.terapeuta || {};
         state.terapeuta = ther;
         renderSig(ther);
-        const nT = fillTherapist(ther);
+        const nT = fillTherapist(ther).n;
         const nF = fillFields(data.campos || {}, state.fields);
         state.msgs.push({ role:"assistant", content:`Preenchi ${nF} campo(s) + ${nT} da assinatura. Revise antes de salvar.` });
         textarea.value = "";
@@ -606,14 +643,25 @@
     } catch (e) { renderSig(null); }
   }
 
-  // Re-tenta preencher assinatura por ~12s (campos podem renderizar tarde)
+  // Re-tenta preencher assinatura por ~20s, rolando a tela entre tentativas
+  // para forçar a renderização lazy do "Conselho/CPF", "Especialidade" etc.
   function autoFillTherapistRetry(t) {
     if (!t || (!t.nome && !t.conselho && !t.especialidade)) return;
+    const wanted = ["nome","conselho","especialidade"].filter(k => t[k]);
     let tries = 0;
-    const tick = () => {
+    const sc = document.scrollingElement || document.documentElement;
+    const tick = async () => {
       tries++;
-      const n = fillTherapist(t);
-      if (n > 0 || tries >= 24) return;
+      const res = fillTherapist(t);
+      const stillMissing = res.missing.filter(k => wanted.includes(k));
+      if (stillMissing.length === 0 || tries >= 40) return;
+      // a cada 2 tentativas, rola um pouco para forçar lazy-render
+      if (tries % 2 === 0) {
+        const y = sc.scrollTop;
+        sc.scrollTop = Math.min(sc.scrollHeight, y + window.innerHeight * 0.8);
+        await new Promise(r=>setTimeout(r,120));
+        sc.scrollTop = y;
+      }
       setTimeout(tick, 500);
     };
     tick();
