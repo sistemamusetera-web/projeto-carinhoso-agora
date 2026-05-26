@@ -283,23 +283,39 @@
   function detectFields() {
     const all = [];
     for (const root of collectRoots()) {
-      try { all.push(...root.querySelectorAll("textarea, input[type='text'], input:not([type]), [contenteditable='true']")); } catch {}
+      try {
+        all.push(...root.querySelectorAll(
+          "textarea, input[type='text'], input:not([type]), [contenteditable='true'], [contenteditable=''], [role='textbox'], .ql-editor, .ProseMirror, .public-DraftEditor-content, .tox-edit-area iframe, .note-editable"
+        ));
+      } catch {}
     }
     const fields = [];
     const seen = new Set();
+    const seenEls = new Set();
     for (const el of all) {
       if (el.disabled || el.readOnly) continue;
       if (isChrome(el)) continue;
+      if (seenEls.has(el)) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 4 || r.height < 4) continue;
       if (el.tagName === "INPUT" && el.offsetWidth < 220 && IGNORE_PLACEHOLDER_RX.test(el.placeholder || "")) continue;
       let label = findLabel(el);
-      if (!label && (el.tagName==="TEXTAREA"||el.getAttribute("contenteditable")==="true")) label = `Campo ${fields.length+1}`;
+      const isRich = el.tagName === "TEXTAREA"
+        || el.getAttribute("contenteditable") === "true"
+        || el.getAttribute("contenteditable") === ""
+        || el.getAttribute("role") === "textbox"
+        || /ql-editor|ProseMirror|DraftEditor|note-editable/.test(el.className || "");
+      if (!label && isRich) label = `Campo ${fields.length+1}`;
       if (!label) continue;
       if (IGNORE_LABEL_RX.test(label)) continue;
       const k = normalize(label);
-      if (!k || seen.has(k)) continue;
-      seen.add(k);
+      if (!k) continue;
+      // permite múltiplos campos com o mesmo label (raro, mas garante que nenhum seja perdido)
+      let uniqueKey = k;
+      let i = 2;
+      while (seen.has(uniqueKey)) uniqueKey = `${k}__${i++}`;
+      seen.add(uniqueKey);
+      seenEls.add(el);
       fields.push({ nome: label, el });
     }
     return fields;
