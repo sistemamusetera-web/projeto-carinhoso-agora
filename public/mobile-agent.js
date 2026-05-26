@@ -326,21 +326,26 @@
   }
 
   // ---------- preencher campos da assinatura ----------
+  // retorna {n, missing:[keys]} para que o retry saiba o que falta
   function fillTherapist(t) {
-    if (!t) return 0;
+    const out = { n: 0, missing: [] };
+    if (!t) return out;
     const map = [
-      { val: t.nome, rx: /(nome\s*completo|terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente|assinatura.*nome|^nome$)/i },
-      { val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro|n[uú]mero do conselho)/i },
-      { val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
-      { val: "__DATE__", rx: /(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|data.*sess|data.*atend)/i },
+      { key: "nome", val: t.nome, rx: /(nome\s*completo|terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente|assinatura.*nome|^nome$)/i },
+      { key: "conselho", val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro|n[uú]mero do conselho)/i },
+      { key: "especialidade", val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
+      { key: "data", val: "__DATE__", rx: /(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|data.*sess|data.*atend)/i },
     ];
     const flds = detectFields();
     const used = new Set();
-    let n = 0;
     for (const m of map) {
       if (!m.val) continue;
+      let placed = false;
       for (const f of flds) {
         if (used.has(f.el)) continue;
+        // não sobrescreve se já preenchido
+        const cur = (f.el.value ?? f.el.innerText ?? "").trim();
+        if (cur && m.key !== "data") { if (m.rx.test(f.nome)) { placed = true; used.add(f.el); break; } continue; }
         if (m.rx.test(f.nome)) {
           try {
             let v = m.val;
@@ -350,11 +355,12 @@
                 const d = new Date(); v = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
               }
             }
-            setNativeValue(f.el, v); used.add(f.el); n++;
+            setNativeValue(f.el, v); used.add(f.el); out.n++; placed = true;
           } catch {}
           break;
         }
       }
+      if (!placed && m.val && m.key !== "data") out.missing.push(m.key);
     }
     // campo "assinatura" consolidado
     const lines = [t.nome, t.conselho, t.especialidade, `Data: ${dataBR()}`].filter(Boolean);
@@ -364,11 +370,12 @@
         if (!/assinatura|assinar|rodap[ée]/i.test(f.nome)) continue;
         const cur = (f.el.value ?? f.el.innerText ?? "").trim();
         if (cur) continue;
-        try { setNativeValue(f.el, lines.join("\n")); used.add(f.el); n++; } catch {}
+        try { setNativeValue(f.el, lines.join("\n")); used.add(f.el); out.n++; } catch {}
       }
     }
-    return n;
+    return out;
   }
+
 
   function fillFields(camposResp, fields) {
     let n = 0;
