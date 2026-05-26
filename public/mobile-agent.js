@@ -550,6 +550,25 @@
     $(".evo-close").onclick = () => panel.remove();
     $(".evo-min").onclick = () => panel.classList.toggle("min");
     $(".evo-redetect").onclick = async () => { fieldsBox.innerHTML="Rolando…"; await preScroll(); state.fields = detectFields(); renderFields(); };
+    $(".evo-fill-sig").onclick = async () => {
+      setStatus("Procurando campos da assinatura…");
+      await preScroll();
+      let t = state.terapeuta;
+      if (!t || (!t.nome && !t.conselho && !t.especialidade)) {
+        try { const r = await apiGet("/api/public/extension/therapist"); t = r.terapeuta; state.terapeuta = t; renderSig(t); } catch {}
+      }
+      if (!t) { setStatus(""); alert("Sem dados do terapeuta em Configurações."); return; }
+      const res = fillTherapist(t);
+      const flds = detectFields().map(f=>f.nome);
+      const sigDetected = flds.filter(n => /nome\s*completo|conselho|cpf|especialidade|assinatura/i.test(n));
+      state.msgs.push({ role:"assistant", content:
+        `Assinatura: preenchi ${res.n} campo(s).` +
+        (res.missing.length ? ` Faltou: ${res.missing.join(", ")}.` : "") +
+        `\nCampos detectados na seção: ${sigDetected.length ? sigDetected.join(" · ") : "nenhum"}.`
+      });
+      renderMsgs();
+      setStatus("");
+    };
     $(".evo-tpl-clear").onclick = (e) => { e.preventDefault(); state.selected.clear(); updateChips(); };
     panel.querySelectorAll(".evo-tpl-chip").forEach(c=>{
       c.onclick = (e) => { e.preventDefault();
