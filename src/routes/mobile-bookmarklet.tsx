@@ -73,11 +73,12 @@ function Page() {
   const panelUrl =
     typeof window !== "undefined" ? window.location.origin : "https://projeto-carinhoso-agora.lovable.app";
 
-  const bookmarklet = useMemo(() => {
+  const bookmarkletCore = useMemo(() => {
     if (!apiKey) return "";
     const code = `(function(){window.__EVO_CFG={panelUrl:'${panelUrl}',apiKey:'${apiKey}'};var s=document.createElement('script');s.src='${panelUrl}/mobile-agent.js?v='+Date.now();document.body.appendChild(s);})();`;
-    return "javascript:" + encodeURIComponent(code);
+    return encodeURIComponent(code);
   }, [apiKey, panelUrl]);
+  const bookmarklet = bookmarkletCore ? "javascript:" + bookmarkletCore : "";
 
   return (
     <div className="min-h-screen bg-slate-50 pb-16">
@@ -153,67 +154,56 @@ function Page() {
             </p>
           ) : (
             <>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Este é o seu link mágico. <b>Toque e segure</b> para copiar, ou siga as instruções abaixo.
-              </p>
-
-              <div className="mt-3 rounded-md border bg-white p-3">
-                <a
-                  href={bookmarklet}
-                  onClick={(e) => e.preventDefault()}
-                  className="break-all font-mono text-xs text-[#3d5841] underline"
-                >
-                  🌱 Agente de Evolução
-                </a>
+              <div className="mt-3 rounded-md border-2 border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">
+                <b>⚠️ Importante (bug do Safari iOS):</b> ao colar no campo de endereço de um favorito, o Safari <b>apaga o <code>javascript:</code></b> sozinho. Por isso, copie o código <b>SEM o prefixo</b> abaixo, cole, e <b>digite à mão</b> <code>javascript:</code> no começo antes de salvar.
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mt-4">
+                <Label className="text-xs font-semibold text-[#3d5841]">
+                  Código para colar (sem prefixo):
+                </Label>
+                <div className="mt-1 max-h-32 overflow-y-auto rounded-md border bg-white p-3 font-mono text-[11px] leading-relaxed break-all">
+                  {bookmarkletCore}
+                </div>
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
-                  className="gap-1.5"
+                  className="mt-2 w-full gap-1.5 bg-[#4b6b4f] hover:bg-[#3d5841]"
                   onClick={() => {
-                    navigator.clipboard.writeText(bookmarklet);
-                    toast.success("Código copiado");
+                    navigator.clipboard.writeText(bookmarkletCore);
+                    toast.success("Copiado! Agora cole no favorito e digite javascript: no começo");
                   }}
                 >
-                  <Copy className="h-3.5 w-3.5" /> Copiar código do bookmarklet
+                  <Copy className="h-3.5 w-3.5" /> Copiar código (sem javascript:)
                 </Button>
               </div>
 
               <div className="mt-5 space-y-3 rounded-md bg-slate-50 p-4 text-sm leading-relaxed">
-                <p className="font-semibold">📱 Como instalar no Safari do iPhone:</p>
+                <p className="font-semibold">📱 Passo a passo no Safari do iPhone:</p>
                 <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
-                  <li>
-                    Abra esta página <b>no Safari do iPhone</b> (não no Chrome).
+                  <li>Abra esta página <b>no Safari</b> (não funciona em Chrome/Edge).</li>
+                  <li>Toque em <b>Compartilhar ↗</b> → <b>Adicionar aos Favoritos</b> → salve com qualquer nome.</li>
+                  <li>Abra <b>Favoritos</b> (ícone do livro 📖) → toque em <b>Editar</b> no canto inferior.</li>
+                  <li>Toque no favorito recém-criado para editá-lo. Renomeie para <b>Agente de Evolução</b>.</li>
+                  <li>Toque no campo de <b>endereço (URL)</b> e apague tudo (toque no <b>×</b>).</li>
+                  <li>Toque em <b>"Copiar código"</b> aqui em cima, volte ao favorito e <b>cole</b>. Vai aparecer <code>evo_xxxx...</code>.</li>
+                  <li className="font-semibold text-amber-800">
+                    Toque no <b>início</b> do campo (antes do <code>evo_</code>) e <b>digite manualmente</b>: <code className="rounded bg-amber-100 px-1.5 py-0.5">javascript:</code> (com os dois pontos, sem espaço).
                   </li>
-                  <li>
-                    Toque no botão <b>Compartilhar</b> ↗ e escolha <b>Adicionar aos Favoritos</b>. Salve com nome qualquer (ex.: "Temp").
-                  </li>
-                  <li>
-                    Abra <b>Favoritos</b> (ícone do livro), encontre o que acabou de salvar, toque em <b>Editar</b>.
-                  </li>
-                  <li>
-                    Renomeie para <b>Agente de Evolução</b> e <b>apague o endereço</b> que está lá.
-                  </li>
-                  <li>
-                    Toque em "Copiar código do bookmarklet" acima e <b>cole no campo de endereço</b> do favorito (começa com <code>javascript:</code>).
-                  </li>
-                  <li>Salve.</li>
+                  <li>Toque em <b>Concluído</b> e depois <b>Salvar</b>.</li>
                 </ol>
+                <p className="rounded bg-white p-2 text-xs">
+                  ✅ Resultado correto: o endereço do favorito deve começar com <code>javascript:</code> e <b>não</b> com <code>http://</code>.
+                </p>
               </div>
 
               <div className="mt-4 space-y-2 rounded-md border border-[#4b6b4f]/30 bg-[#4b6b4f]/5 p-4 text-sm">
-                <p className="font-semibold text-[#3d5841]">✨ Como usar:</p>
+                <p className="font-semibold text-[#3d5841]">✨ Como usar depois:</p>
                 <ol className="list-decimal space-y-1 pl-5 text-muted-foreground">
-                  <li>Entre no Clínica nas Nuvens pelo Safari.</li>
+                  <li>Entre no Clínica nas Nuvens pelo <b>Safari</b>.</li>
                   <li>Abra a tela de evolução do paciente.</li>
-                  <li>
-                    Toque na barra de endereço, abra <b>Favoritos</b> e toque em <b>Agente de Evolução</b>.
-                  </li>
-                  <li>
-                    O painel verde abre, detecta os campos e a IA preenche o formulário automaticamente. 🎉
-                  </li>
+                  <li>Toque na barra de endereço → <b>Favoritos 📖</b> → <b>Agente de Evolução</b>.</li>
+                  <li>O painel verde abre e a IA preenche o formulário automaticamente. 🎉</li>
                 </ol>
               </div>
             </>
