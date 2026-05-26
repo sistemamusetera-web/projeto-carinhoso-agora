@@ -589,13 +589,11 @@
           renderMsgs(); return;
         }
 
-        // Re-detecta campos automaticamente se vazio (sem bloquear)
-        if (!state.fields.length) {
-          setStatus("Detectando campos…");
-          try { await preScroll(); } catch {}
-          state.fields = detectFields();
-          renderFields();
-        }
+        // SEMPRE re-rola e re-detecta para capturar campos renderizados sob demanda
+        setStatus("Detectando campos do formulário…");
+        try { await preScroll(); } catch {}
+        state.fields = detectFields();
+        renderFields();
 
         const tpls = Array.from(state.selected);
         const extra = textarea.value.trim();
@@ -604,15 +602,12 @@
           renderMsgs(); return;
         }
 
-        // Campos a preencher: os detectados (sem assinatura). Se nada detectado, usa um conjunto padrão para que a IA gere algo útil.
-        const camposParaIA = state.fields.length
-          ? state.fields.filter(f=>!isSig(f.nome)).map(f=>f.nome)
+        // Campos não-assinatura realmente detectados na página
+        const camposDetectados = state.fields.filter(f=>!isSig(f.nome)).map(f=>f.nome);
+        // Usa os labels reais; se nada, cai num conjunto padrão para gerar texto útil ao histórico
+        const camposParaIA = camposDetectados.length
+          ? camposDetectados
           : ["Descrição da sessão","Recursos utilizados","Comportamento","Respostas terapêuticas","Participação","Plano aplicado","Observações","Próximos objetivos"];
-
-        if (!camposParaIA.length) {
-          state.msgs.push({ role:"system", content:"⚠️ Só campos de assinatura detectados. Abra a aba de evolução e toque ↻." });
-          renderMsgs(); return;
-        }
 
         const partes = [];
         if (tpls.length) partes.push("Observações da sessão:\n- " + tpls.join("\n- "));
@@ -623,7 +618,7 @@
 
         sendBtn.disabled = true;
         sendBtn.textContent = "Gerando…";
-        setStatus("Enviando para IA… (pode levar até 1 min)");
+        setStatus(`Enviando para IA… (${camposDetectados.length} campo(s) detectado(s))`);
 
         const data = await apiPost("/api/public/extension/chat-generate", {
           pacienteNome: state.pacienteNome,
@@ -635,10 +630,28 @@
         state.terapeuta = ther;
         renderSig(ther);
         const nT = fillTherapist(ther).n;
-        const nF = state.fields.length ? fillFields(data.campos || {}, state.fields) : 0;
+
+        // Re-detecta DE NOVO antes de preencher (campos podem ter aparecido)
+        try { await preScroll(); } catch {}
+        state.fields = detectFields();
+        renderFields();
+
+        let nF = fillFields(data.campos || {}, state.fields);
+        // Se nada bateu, tenta de novo após pequena espera (lazy render)
+        if (!nF && state.fields.length) {
+          await new Promise(r=>setTimeout(r,400));
+          state.fields = detectFields();
+          nF = fillFields(data.campos || {}, state.fields);
+        }
+
+        const blocos = Object.keys(data.campos||{}).length;
         const resumo = nF
-          ? `✅ Preenchi ${nF} campo(s) + ${nT} da assinatura. Revise antes de salvar.`
-          : `✅ Evolução gerada (${Object.keys(data.campos||{}).length} blocos) e salva no histórico. Nenhum campo do formulário foi detectado para preenchimento direto — abra a aba de evolução, toque ↻ e clique novamente.`;
+          ? `✅ Preenchi ${nF} de ${state.fields.filter(f=>!isSig(f.nome)).length} campo(s) do formulário + ${nT} da assinatura.`
+          : `⚠️ IA gerou ${blocos} bloco(s) e a evolução foi salva no histórico, mas nenhum campo bateu com o formulário. Abra a aba de evolução, toque ↻ e clique novamente. Campos detectados: ${state.fields.map(f=>f.nome).join(" · ") || "nenhum"}.`;
+        state.msgs.push({ role:"assistant", content: resumo });
+        textarea.value = "";
+        state.selected.clear();
+        updateChips();
         state.msgs.push({ role:"assistant", content: resumo });
         textarea.value = "";
         state.selected.clear();
