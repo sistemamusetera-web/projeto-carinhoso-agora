@@ -200,27 +200,76 @@
     await new Promise(r=>setTimeout(r,150));
   }
 
+  const IGNORE_LABEL_RX = /^(obrigat[óo]rio|opcional|texto|campo|sele[çc][aã]o|pesquisar|buscar|filtrar)$/i;
+  const IGNORE_PLACEHOLDER_RX = /(pesquisar|buscar|filtrar|selecione)/i;
   function clean(s){ return (s||"").replace(/\*/g,"").replace(/\(obrigat[óo]rio\)/gi,"").replace(/obrigat[óo]rio/gi,"").replace(/\s+/g," ").trim(); }
+
+  function collectLeadingTexts(container, inputEl) {
+    const texts = [];
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT, null);
+    let node = walker.nextNode();
+    while (node) {
+      if (node === inputEl || node.contains(inputEl)) {
+        if (node === inputEl) break;
+        node = walker.nextNode(); continue;
+      }
+      if (node.children.length === 0 || ["LABEL","SPAN","P","DIV","H1","H2","H3","H4","STRONG","B"].includes(node.tagName)) {
+        const t = (node.innerText || node.textContent || "").trim();
+        if (t) texts.push(t.split("\n")[0].trim());
+      }
+      node = walker.nextNode();
+    }
+    return texts;
+  }
+  function pickBestLabel(texts) {
+    for (const raw of texts) {
+      const t = clean(raw);
+      if (!t) continue;
+      if (t.length > 160) continue;
+      if (IGNORE_LABEL_RX.test(t)) continue;
+      if (/^[\d\s\-\/.:]+$/.test(t)) continue;
+      return t;
+    }
+    return null;
+  }
+  function findFieldCardLabel(el) {
+    let cur = el.parentElement;
+    let best = null;
+    for (let depth = 0; depth < 12 && cur; depth++) {
+      const inputs = cur.querySelectorAll("input[type='text'], input:not([type]), textarea");
+      if (inputs.length > 1) break;
+      const texts = collectLeadingTexts(cur, el);
+      const label = pickBestLabel(texts);
+      if (label) best = label;
+      if (best) return best;
+      cur = cur.parentElement;
+    }
+    return best;
+  }
 
   function findLabel(el) {
     if (el.id) {
       const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
-      if (lab) return clean(lab.innerText);
+      if (lab) {
+        const c = clean(lab.innerText);
+        if (c && !IGNORE_LABEL_RX.test(c)) return c;
+      }
     }
-    // sobe procurando label curto antes do input
+    const card = findFieldCardLabel(el);
+    if (card) return card;
+    if (el.getAttribute("aria-label")) return clean(el.getAttribute("aria-label"));
     let cur = el.parentElement;
     for (let d=0; d<8 && cur; d++) {
       let sib = el.previousElementSibling || cur.previousElementSibling;
       while (sib) {
         const t = (sib.innerText||"").trim().split("\n")[0].trim();
         const c = clean(t);
-        if (c && c.length<=160 && !/^(obrigat[óo]rio|opcional|texto|campo|sele[çc][aã]o|pesquisar|buscar)$/i.test(c) && !/^[\d\s\-\/.:]+$/.test(c)) return c;
+        if (c && c.length<=160 && !IGNORE_LABEL_RX.test(c) && !/^[\d\s\-\/.:]+$/.test(c)) return c;
         sib = sib.previousElementSibling;
       }
       cur = cur.parentElement;
     }
-    if (el.getAttribute("aria-label")) return clean(el.getAttribute("aria-label"));
-    if (el.placeholder) return clean(el.placeholder);
+    if (el.placeholder && !IGNORE_PLACEHOLDER_RX.test(el.placeholder)) return clean(el.placeholder);
     return null;
   }
 
@@ -233,9 +282,11 @@
       if (isChrome(el)) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 4 || r.height < 4) continue;
+      if (el.tagName === "INPUT" && el.offsetWidth < 220 && IGNORE_PLACEHOLDER_RX.test(el.placeholder || "")) continue;
       let label = findLabel(el);
       if (!label && (el.tagName==="TEXTAREA"||el.getAttribute("contenteditable")==="true")) label = `Campo ${fields.length+1}`;
       if (!label) continue;
+      if (IGNORE_LABEL_RX.test(label)) continue;
       const k = normalize(label);
       if (!k || seen.has(k)) continue;
       seen.add(k);
