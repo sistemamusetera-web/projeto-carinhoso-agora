@@ -73,11 +73,12 @@ function Page() {
   const panelUrl =
     typeof window !== "undefined" ? window.location.origin : "https://projeto-carinhoso-agora.lovable.app";
 
-  const bookmarklet = useMemo(() => {
+  const bookmarkletCore = useMemo(() => {
     if (!apiKey) return "";
     const code = `(function(){window.__EVO_CFG={panelUrl:'${panelUrl}',apiKey:'${apiKey}'};var s=document.createElement('script');s.src='${panelUrl}/mobile-agent.js?v='+Date.now();document.body.appendChild(s);})();`;
-    return "javascript:" + encodeURIComponent(code);
+    return encodeURIComponent(code);
   }, [apiKey, panelUrl]);
+  const bookmarklet = bookmarkletCore ? "javascript:" + bookmarkletCore : "";
 
   return (
     <div className="min-h-screen bg-slate-50 pb-16">
