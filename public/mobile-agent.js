@@ -320,7 +320,7 @@
     if (!t) return 0;
     const map = [
       { val: t.nome, rx: /(nome\s*completo|terapeuta|profissional|respons[áa]vel|psic[óo]logo|psicologa|atendente|assinatura.*nome|^nome$)/i },
-      { val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro)/i },
+      { val: t.conselho, rx: /(conselho|crp|crm|cro|cpf|registro|n[uú]mero do conselho)/i },
       { val: t.especialidade, rx: /(especialidade|[áa]rea de atua|forma[çc][aã]o)/i },
       { val: "__DATE__", rx: /(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|data.*sess|data.*atend)/i },
     ];
