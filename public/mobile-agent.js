@@ -601,9 +601,22 @@
       if (r.terapeuta) {
         state.terapeuta = r.terapeuta;
         renderSig(r.terapeuta);
-        fillTherapist(r.terapeuta);
+        autoFillTherapistRetry(r.terapeuta);
       } else renderSig(null);
     } catch (e) { renderSig(null); }
+  }
+
+  // Re-tenta preencher assinatura por ~12s (campos podem renderizar tarde)
+  function autoFillTherapistRetry(t) {
+    if (!t || (!t.nome && !t.conselho && !t.especialidade)) return;
+    let tries = 0;
+    const tick = () => {
+      tries++;
+      const n = fillTherapist(t);
+      if (n > 0 || tries >= 24) return;
+      setTimeout(tick, 500);
+    };
+    tick();
   }
 
   window.__EVO_MOBILE_OPEN = openChat;
