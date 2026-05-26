@@ -496,7 +496,7 @@
         <textarea placeholder="Opcional: observações adicionais (intercorrências, recursos específicos...)"></textarea>
         <div class="evo-chat-actions">
           <button class="evo-btn-secondary evo-clear">Limpar</button>
-          <button class="evo-btn-primary evo-send">✨ Gerar e preencher</button>
+          <button type="button" class="evo-btn-primary evo-send">✨ Gerar e preencher</button>
         </div>
       </div>`;
     document.body.appendChild(panel);
