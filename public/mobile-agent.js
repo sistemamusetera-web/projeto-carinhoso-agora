@@ -726,15 +726,16 @@
         renderMsgs();
       }
     };
-    sendBtn.onclick = handleSend;
-    sendBtn.addEventListener("click", handleSend);
-    // iOS Safari às vezes não dispara click confiável — touchend garante
-    let _touched = false;
-    sendBtn.addEventListener("touchend", (e) => {
-      _touched = true;
+    // Debounce para evitar duplo disparo (touchend + click no iOS)
+    let _lastFire = 0;
+    const fireSend = (e) => {
+      const now = Date.now();
+      if (now - _lastFire < 700) { try{e&&e.preventDefault&&e.preventDefault();}catch{} return; }
+      _lastFire = now;
       handleSend(e);
-      setTimeout(()=>{ _touched = false; }, 600);
-    }, { passive: false });
+    };
+    sendBtn.addEventListener("click", fireSend);
+    sendBtn.addEventListener("touchend", fireSend, { passive: false });
 
     renderMsgs();
     fieldsBox.innerHTML = "Rolando para detectar campos…";
