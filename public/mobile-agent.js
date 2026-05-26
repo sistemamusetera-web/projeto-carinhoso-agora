@@ -623,14 +623,25 @@
     } catch (e) { renderSig(null); }
   }
 
-  // Re-tenta preencher assinatura por ~12s (campos podem renderizar tarde)
+  // Re-tenta preencher assinatura por ~20s, rolando a tela entre tentativas
+  // para forçar a renderização lazy do "Conselho/CPF", "Especialidade" etc.
   function autoFillTherapistRetry(t) {
     if (!t || (!t.nome && !t.conselho && !t.especialidade)) return;
+    const wanted = ["nome","conselho","especialidade"].filter(k => t[k]);
     let tries = 0;
-    const tick = () => {
+    const sc = document.scrollingElement || document.documentElement;
+    const tick = async () => {
       tries++;
-      const n = fillTherapist(t);
-      if (n > 0 || tries >= 24) return;
+      const res = fillTherapist(t);
+      const stillMissing = res.missing.filter(k => wanted.includes(k));
+      if (stillMissing.length === 0 || tries >= 40) return;
+      // a cada 2 tentativas, rola um pouco para forçar lazy-render
+      if (tries % 2 === 0) {
+        const y = sc.scrollTop;
+        sc.scrollTop = Math.min(sc.scrollHeight, y + window.innerHeight * 0.8);
+        await new Promise(r=>setTimeout(r,120));
+        sc.scrollTop = y;
+      }
       setTimeout(tick, 500);
     };
     tick();
