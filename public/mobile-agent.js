@@ -200,13 +200,25 @@
     await new Promise(r=>setTimeout(r,150));
   }
 
-  const IGNORE_LABEL_RX = /^(obrigat[óo]rio|opcional|texto|campo|sele[çc][aã]o|pesquisar|buscar|filtrar)$/i;
-  const IGNORE_PLACEHOLDER_RX = /(pesquisar|buscar|filtrar|selecione)/i;
+  const IGNORE_LABEL_RX = /^(obrigat[óo]rio|opcional|texto|campo|sele[çc][aã]o|pesquisar\.?\.?\.?|buscar|filtrar|selecione|data|hora|nenhum|todos|ok|sim|n[aã]o|salvar|cancelar|editar|excluir|adicionar|novo|carregando|loading|menu|filtro)$/i;
+  const IGNORE_LABEL_CONTAINS_RX = /(\(\s*\)|init\s*\(|function\s*\(|var\s+\w+\s*=|window\.|document\.|console\.|<\/?\w+|\{|\}|;)/;
+  const IGNORE_PLACEHOLDER_RX = /(pesquisar|buscar|filtrar|selecione|search|filter)/i;
   function clean(s){ return (s||"").replace(/\*/g,"").replace(/\(obrigat[óo]rio\)/gi,"").replace(/obrigat[óo]rio/gi,"").replace(/\s+/g," ").trim(); }
+  function isJunkLabel(s){
+    if (!s) return true;
+    if (IGNORE_LABEL_RX.test(s)) return true;
+    if (IGNORE_LABEL_CONTAINS_RX.test(s)) return true;
+    if (/^[\d\s\-\/.:]+$/.test(s)) return true;
+    if (s.length < 3 || s.length > 120) return true;
+    return false;
+  }
 
+  const SKIP_TAGS = new Set(["SCRIPT","STYLE","NOSCRIPT","SVG","CANVAS","IFRAME","TEMPLATE","CODE","PRE"]);
   function collectLeadingTexts(container, inputEl) {
     const texts = [];
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT, null);
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_ELEMENT, {
+      acceptNode(n){ return SKIP_TAGS.has(n.tagName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT; }
+    });
     let node = walker.nextNode();
     while (node) {
       if (node === inputEl || node.contains(inputEl)) {
