@@ -340,6 +340,7 @@
     const panel = document.createElement("div");
     panel.className = "evo-chat";
     panel.innerHTML = `
+      <div class="evo-grip" title="Arraste para redimensionar"></div>
       <div class="evo-chat-header">
         <div style="flex:1;min-width:0">
           <strong>🌱 Agente de Evolução</strong>
@@ -347,6 +348,7 @@
         </div>
         <div style="display:flex;align-items:center">
           <button class="evo-redetect" title="Re-detectar">↻</button>
+          <button class="evo-size" title="Alternar tamanho">⇕</button>
           <button class="evo-min" title="Minimizar">—</button>
           <button class="evo-close" title="Fechar">×</button>
         </div>
