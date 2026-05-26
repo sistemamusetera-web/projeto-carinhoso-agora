@@ -283,23 +283,39 @@
   function detectFields() {
     const all = [];
     for (const root of collectRoots()) {
-      try { all.push(...root.querySelectorAll("textarea, input[type='text'], input:not([type]), [contenteditable='true']")); } catch {}
+      try {
+        all.push(...root.querySelectorAll(
+          "textarea, input[type='text'], input:not([type]), [contenteditable='true'], [contenteditable=''], [role='textbox'], .ql-editor, .ProseMirror, .public-DraftEditor-content, .tox-edit-area iframe, .note-editable"
+        ));
+      } catch {}
     }
     const fields = [];
     const seen = new Set();
+    const seenEls = new Set();
     for (const el of all) {
       if (el.disabled || el.readOnly) continue;
       if (isChrome(el)) continue;
+      if (seenEls.has(el)) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 4 || r.height < 4) continue;
       if (el.tagName === "INPUT" && el.offsetWidth < 220 && IGNORE_PLACEHOLDER_RX.test(el.placeholder || "")) continue;
       let label = findLabel(el);
-      if (!label && (el.tagName==="TEXTAREA"||el.getAttribute("contenteditable")==="true")) label = `Campo ${fields.length+1}`;
+      const isRich = el.tagName === "TEXTAREA"
+        || el.getAttribute("contenteditable") === "true"
+        || el.getAttribute("contenteditable") === ""
+        || el.getAttribute("role") === "textbox"
+        || /ql-editor|ProseMirror|DraftEditor|note-editable/.test(el.className || "");
+      if (!label && isRich) label = `Campo ${fields.length+1}`;
       if (!label) continue;
       if (IGNORE_LABEL_RX.test(label)) continue;
       const k = normalize(label);
-      if (!k || seen.has(k)) continue;
-      seen.add(k);
+      if (!k) continue;
+      // permite múltiplos campos com o mesmo label (raro, mas garante que nenhum seja perdido)
+      let uniqueKey = k;
+      let i = 2;
+      while (seen.has(uniqueKey)) uniqueKey = `${k}__${i++}`;
+      seen.add(uniqueKey);
+      seenEls.add(el);
       fields.push({ nome: label, el });
     }
     return fields;
@@ -377,18 +393,47 @@
   }
 
 
+  function activateEditor(el) {
+    try {
+      el.scrollIntoView({ block: "center" });
+      // Para editores lazy (Quill/ProseMirror/etc), um click+focus costuma materializar o contenteditable
+      const card = el.closest('[class*="field"], [class*="campo"], [class*="card"], [class*="editor"]') || el.parentElement;
+      try { card && card.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch {}
+      try { el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); } catch {}
+      try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch {}
+      try { el.focus(); } catch {}
+    } catch {}
+  }
+
   function fillFields(camposResp, fields) {
     let n = 0;
+    const filled = new Set();
+    const respEntries = Object.entries(camposResp).filter(([k]) => !isSig(k));
     for (const f of fields) {
       if (isSig(f.nome)) continue;
       const k = normalize(f.nome);
       let val = null;
-      for (const [kk, vv] of Object.entries(camposResp)) {
-        if (isSig(kk)) continue;
+      let bestScore = 0;
+      for (const [kk, vv] of respEntries) {
+        if (filled.has(kk)) continue;
         const nk = normalize(kk);
-        if (nk === k || nk.includes(k) || k.includes(nk)) { val = vv; break; }
+        let score = 0;
+        if (nk === k) score = 100;
+        else if (nk.includes(k) || k.includes(nk)) score = 50;
+        else {
+          // matching por palavras em comum (>=2 palavras de >=4 chars)
+          const wk = new Set(k.split(" ").filter(w => w.length >= 4));
+          const wn = new Set(nk.split(" ").filter(w => w.length >= 4));
+          let common = 0;
+          for (const w of wk) if (wn.has(w)) common++;
+          if (common >= 2) score = 20 + common;
+        }
+        if (score > bestScore) { bestScore = score; val = vv; var chosenKey = kk; }
       }
-      if (val) { try { setNativeValue(f.el, val); n++; } catch {} }
+      if (val && bestScore > 0) {
+        activateEditor(f.el);
+        try { setNativeValue(f.el, val); n++; filled.add(chosenKey); } catch {}
+      }
     }
     return n;
   }
@@ -631,27 +676,38 @@
         renderSig(ther);
         const nT = fillTherapist(ther).n;
 
-        // Re-detecta DE NOVO antes de preencher (campos podem ter aparecido)
-        try { await preScroll(); } catch {}
-        state.fields = detectFields();
-        renderFields();
-
-        let nF = fillFields(data.campos || {}, state.fields);
-        // Se nada bateu, tenta de novo após pequena espera (lazy render)
-        if (!nF && state.fields.length) {
-          await new Promise(r=>setTimeout(r,400));
+        // Múltiplas passadas: rola, detecta, ativa editores lazy e preenche.
+        // Mantém os já preenchidos e tenta novamente os que faltaram.
+        setStatus("Preenchendo campos do formulário…");
+        const respCampos = data.campos || {};
+        const blocos = Object.keys(respCampos).length;
+        let nF = 0;
+        let totalCampos = 0;
+        const remaining = { ...respCampos };
+        for (let pass = 0; pass < 4; pass++) {
+          try { await preScroll(); } catch {}
           state.fields = detectFields();
-          nF = fillFields(data.campos || {}, state.fields);
+          renderFields();
+          totalCampos = state.fields.filter(f=>!isSig(f.nome)).length;
+          const got = fillFields(remaining, state.fields);
+          nF += got;
+          // remove do "remaining" o que já bateu (heurística: marca por inclusão)
+          if (got) {
+            for (const f of state.fields) {
+              const k = normalize(f.nome);
+              for (const kk of Object.keys(remaining)) {
+                const nk = normalize(kk);
+                if (nk === k || nk.includes(k) || k.includes(nk)) { delete remaining[kk]; break; }
+              }
+            }
+          }
+          if (!Object.keys(remaining).length) break;
+          await new Promise(r=>setTimeout(r,350));
         }
 
-        const blocos = Object.keys(data.campos||{}).length;
         const resumo = nF
-          ? `✅ Preenchi ${nF} de ${state.fields.filter(f=>!isSig(f.nome)).length} campo(s) do formulário + ${nT} da assinatura.`
+          ? `✅ Preenchi ${nF} de ${totalCampos} campo(s) do formulário + ${nT} da assinatura.`
           : `⚠️ IA gerou ${blocos} bloco(s) e a evolução foi salva no histórico, mas nenhum campo bateu com o formulário. Abra a aba de evolução, toque ↻ e clique novamente. Campos detectados: ${state.fields.map(f=>f.nome).join(" · ") || "nenhum"}.`;
-        state.msgs.push({ role:"assistant", content: resumo });
-        textarea.value = "";
-        state.selected.clear();
-        updateChips();
         state.msgs.push({ role:"assistant", content: resumo });
         textarea.value = "";
         state.selected.clear();
