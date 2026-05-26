@@ -273,7 +273,6 @@
     return null;
   }
 
-  function detectFields() {
   function collectRoots() {
     const roots = [document];
     for (const f of document.querySelectorAll("iframe")) {
