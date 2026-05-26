@@ -448,7 +448,11 @@
     state.pacienteNome = detectPatient();
     state.pacienteIdExterno = extractIdFromUrl();
     state.selected = new Set();
-    state.msgs = [{ role:"assistant", content:"Selecione os chips abaixo e/ou descreva a sessão. Eu preencho os campos automaticamente." }];
+    const AGENT_VERSION = "v2026-05-26.3";
+    state.msgs = [
+      { role:"system", content:`🔧 Agente ${AGENT_VERSION} carregado. API: ${PANEL}` },
+      { role:"assistant", content:"Selecione os chips abaixo e/ou descreva a sessão. Eu preencho os campos automaticamente." }
+    ];
 
     const panel = document.createElement("div");
     panel.className = "evo-chat";
