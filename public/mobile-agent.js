@@ -314,9 +314,8 @@
     const all = [];
     for (const root of collectRoots()) {
       try {
-        // Prioriza textarea e contenteditable — formulários de evolução usam textareas
         all.push(...root.querySelectorAll(
-          "textarea, [contenteditable='true'], [contenteditable=''], [role='textbox'], .ql-editor, .ProseMirror, .public-DraftEditor-content, .note-editable"
+          "textarea, input[type='text'], input:not([type]), [contenteditable='true'], [contenteditable=''], [role='textbox'], .ql-editor, .ProseMirror, .public-DraftEditor-content, .note-editable"
         ));
       } catch {}
     }
@@ -327,9 +326,15 @@
       if (el.disabled || el.readOnly) continue;
       if (isChrome(el)) continue;
       if (seenEls.has(el)) continue;
+      const tag = el.tagName;
+      // Filtros de busca/chrome só para inputs simples
+      if (tag === "INPUT") {
+        const t = (el.type || "").toLowerCase();
+        if (t && !["text",""].includes(t)) continue;
+        if (isSearchInput(el)) continue;
+      }
       const r = el.getBoundingClientRect();
-      if (r.width < 40 || r.height < 20) continue;
-      // Ignora qualquer coisa dentro de header/nav/aside (busca, filtros)
+      if (r.width < 80 || r.height < 18) continue;
       if (el.closest("header,nav,aside,[role='banner'],[role='navigation'],[role='search']")) continue;
       let label = findLabel(el);
       if (!label) continue;
@@ -474,7 +479,7 @@
     state.pacienteNome = detectPatient();
     state.pacienteIdExterno = extractIdFromUrl();
     state.selected = new Set();
-    const AGENT_VERSION = "v2026-05-26.5-textarea-only";
+    const AGENT_VERSION = "v2026-05-26.6-inputs-back";
     state.msgs = [
       { role:"system", content:`🔧 Agente ${AGENT_VERSION} carregado. API: ${PANEL}` },
       { role:"assistant", content:"Selecione os chips abaixo e/ou descreva a sessão. Eu preencho os campos automaticamente." }
