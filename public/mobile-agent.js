@@ -415,6 +415,7 @@
           <input class="evo-chat-paciente" placeholder="Nome do paciente" value="${esc(state.pacienteNome)}" />
         </div>
         <div style="display:flex;align-items:center">
+          <button class="evo-fill-sig" title="Preencher assinatura">✍️</button>
           <button class="evo-redetect" title="Re-detectar">↻</button>
           <button class="evo-size" title="Alternar tamanho">⇕</button>
           <button class="evo-min" title="Minimizar">—</button>
