@@ -448,7 +448,11 @@
     state.pacienteNome = detectPatient();
     state.pacienteIdExterno = extractIdFromUrl();
     state.selected = new Set();
-    state.msgs = [{ role:"assistant", content:"Selecione os chips abaixo e/ou descreva a sessão. Eu preencho os campos automaticamente." }];
+    const AGENT_VERSION = "v2026-05-26.3";
+    state.msgs = [
+      { role:"system", content:`🔧 Agente ${AGENT_VERSION} carregado. API: ${PANEL}` },
+      { role:"assistant", content:"Selecione os chips abaixo e/ou descreva a sessão. Eu preencho os campos automaticamente." }
+    ];
 
     const panel = document.createElement("div");
     panel.className = "evo-chat";
@@ -595,25 +599,48 @@
     $(".evo-close").onclick = () => panel.remove();
     $(".evo-min").onclick = () => panel.classList.toggle("min");
     $(".evo-redetect").onclick = async () => { fieldsBox.innerHTML="Rolando…"; await preScroll(); state.fields = detectFields(); renderFields(); };
-    $(".evo-fill-sig").onclick = async () => {
-      setStatus("Procurando campos da assinatura…");
-      await preScroll();
-      let t = state.terapeuta;
-      if (!t || (!t.nome && !t.conselho && !t.especialidade)) {
-        try { const r = await apiGet("/api/public/extension/therapist"); t = r.terapeuta; state.terapeuta = t; renderSig(t); } catch {}
-      }
-      if (!t) { setStatus(""); alert("Sem dados do terapeuta em Configurações."); return; }
-      const res = fillTherapist(t);
-      const flds = detectFields().map(f=>f.nome);
-      const sigDetected = flds.filter(n => /nome\s*completo|conselho|cpf|especialidade|assinatura/i.test(n));
-      state.msgs.push({ role:"assistant", content:
-        `Assinatura: preenchi ${res.n} campo(s).` +
-        (res.missing.length ? ` Faltou: ${res.missing.join(", ")}.` : "") +
-        `\nCampos detectados na seção: ${sigDetected.length ? sigDetected.join(" · ") : "nenhum"}.`
-      });
+    const handleFillSig = async (ev) => {
+      try { ev && ev.preventDefault && ev.preventDefault(); } catch {}
+      state.msgs.push({ role:"system", content:"▶️ [Assinatura] clique recebido. Buscando terapeuta…" });
       renderMsgs();
-      setStatus("");
+      setStatus("Procurando campos da assinatura…");
+      try {
+        await preScroll();
+        let t = state.terapeuta;
+        try {
+          const r = await apiGet("/api/public/extension/therapist");
+          t = r.terapeuta || t;
+          state.terapeuta = t;
+          renderSig(t);
+          state.msgs.push({ role:"system", content:`📡 API ok — nome="${t?.nome||""}", conselho="${t?.conselho||""}", esp="${t?.especialidade||""}"` });
+        } catch (e) {
+          state.msgs.push({ role:"system", content:"❌ Falha API terapeuta: " + (e&&e.message||e) });
+          renderMsgs();
+        }
+        if (!t || (!t.nome && !t.conselho && !t.especialidade)) {
+          state.msgs.push({ role:"system", content:"⚠️ Nenhum dado de terapeuta retornado pela API. Verifique /configuracoes." });
+          renderMsgs(); setStatus(""); return;
+        }
+        const res = fillTherapist(t);
+        const flds = detectFields().map(f=>f.nome);
+        const sigDetected = flds.filter(n => /nome\s*completo|conselho|cpf|especialidade|assinatura/i.test(n));
+        state.msgs.push({ role:"assistant", content:
+          `Assinatura: preenchi ${res.n} campo(s).` +
+          (res.missing.length ? ` Faltou: ${res.missing.join(", ")}.` : "") +
+          `\nCampos detectados na seção: ${sigDetected.length ? sigDetected.join(" · ") : "nenhum"}.`
+        });
+      } catch (e) {
+        state.msgs.push({ role:"system", content:"❌ Erro assinatura: " + (e&&e.message||e) });
+      } finally {
+        renderMsgs();
+        setStatus("");
+      }
     };
+    const fillSigBtn = $(".evo-fill-sig");
+    let _sigLast = 0;
+    const fireSig = (e) => { const n=Date.now(); if(n-_sigLast<700){try{e&&e.preventDefault&&e.preventDefault();}catch{}return;} _sigLast=n; handleFillSig(e); };
+    fillSigBtn.addEventListener("click", fireSig);
+    fillSigBtn.addEventListener("touchend", fireSig, { passive:false });
     $(".evo-tpl-clear").onclick = (e) => { e.preventDefault(); state.selected.clear(); updateChips(); };
     panel.querySelectorAll(".evo-tpl-chip").forEach(c=>{
       c.onclick = (e) => { e.preventDefault();
