@@ -314,8 +314,9 @@
     const all = [];
     for (const root of collectRoots()) {
       try {
+        // Prioriza textarea e contenteditable — formulários de evolução usam textareas
         all.push(...root.querySelectorAll(
-          "textarea, input[type='text'], input:not([type]), [contenteditable='true'], [contenteditable=''], [role='textbox'], .ql-editor, .ProseMirror, .public-DraftEditor-content, .tox-edit-area iframe, .note-editable"
+          "textarea, [contenteditable='true'], [contenteditable=''], [role='textbox'], .ql-editor, .ProseMirror, .public-DraftEditor-content, .note-editable"
         ));
       } catch {}
     }
@@ -327,22 +328,13 @@
       if (isChrome(el)) continue;
       if (seenEls.has(el)) continue;
       const r = el.getBoundingClientRect();
-      if (r.width < 4 || r.height < 4) continue;
-      // Bloqueia campos de busca/filtro independente da largura
-      if (el.tagName === "INPUT" && isSearchInput(el)) continue;
+      if (r.width < 40 || r.height < 20) continue;
+      // Ignora qualquer coisa dentro de header/nav/aside (busca, filtros)
+      if (el.closest("header,nav,aside,[role='banner'],[role='navigation'],[role='search']")) continue;
       let label = findLabel(el);
-      const isRich = el.tagName === "TEXTAREA"
-        || el.getAttribute("contenteditable") === "true"
-        || el.getAttribute("contenteditable") === ""
-        || el.getAttribute("role") === "textbox"
-        || /ql-editor|ProseMirror|DraftEditor|note-editable/.test(el.className || "");
-      // Para inputs (não-rich) sem label real, pula. Para rich text, só mantém se já tiver pelo menos 1 campo rotulado de verdade.
-      if (!label) {
-        if (!isRich) continue;
-        // Não cria nomes "Campo N" — só atrapalham o matching da IA
-        continue;
-      }
+      if (!label) continue;
       if (isJunkLabel(label)) continue;
+      if (label.length < 4) continue;
       const k = normalize(label);
       if (!k) continue;
       let uniqueKey = k;
