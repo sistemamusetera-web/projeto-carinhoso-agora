@@ -238,8 +238,7 @@
       const t = clean(raw);
       if (!t) continue;
       if (t.length > 160) continue;
-      if (IGNORE_LABEL_RX.test(t)) continue;
-      if (/^[\d\s\-\/.:]+$/.test(t)) continue;
+      if (isJunkLabel(t)) continue;
       return t;
     }
     return null;
@@ -264,24 +263,28 @@
       const lab = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
       if (lab) {
         const c = clean(lab.innerText);
-        if (c && !IGNORE_LABEL_RX.test(c)) return c;
+        if (c && !isJunkLabel(c)) return c;
       }
     }
     const card = findFieldCardLabel(el);
     if (card) return card;
-    if (el.getAttribute("aria-label")) return clean(el.getAttribute("aria-label"));
+    const aria = el.getAttribute("aria-label");
+    if (aria) { const c = clean(aria); if (c && !isJunkLabel(c)) return c; }
     let cur = el.parentElement;
     for (let d=0; d<8 && cur; d++) {
       let sib = el.previousElementSibling || cur.previousElementSibling;
       while (sib) {
         const t = (sib.innerText||"").trim().split("\n")[0].trim();
         const c = clean(t);
-        if (c && c.length<=160 && !IGNORE_LABEL_RX.test(c) && !/^[\d\s\-\/.:]+$/.test(c)) return c;
+        if (c && !isJunkLabel(c)) return c;
         sib = sib.previousElementSibling;
       }
       cur = cur.parentElement;
     }
-    if (el.placeholder && !IGNORE_PLACEHOLDER_RX.test(el.placeholder)) return clean(el.placeholder);
+    if (el.placeholder && !IGNORE_PLACEHOLDER_RX.test(el.placeholder)) {
+      const c = clean(el.placeholder);
+      if (c && !isJunkLabel(c)) return c;
+    }
     return null;
   }
 
@@ -291,6 +294,21 @@
       try { if (f.contentDocument) roots.push(f.contentDocument); } catch {}
     }
     return roots;
+  }
+  function isSearchInput(el){
+    const ph = (el.placeholder || "") + " " + (el.getAttribute("aria-label") || "") + " " + (el.name || "") + " " + (el.id || "");
+    if (IGNORE_PLACEHOLDER_RX.test(ph)) return true;
+    if (el.type === "search") return true;
+    // Inputs dentro de header/nav/aside costumam ser busca/filtro
+    let cur = el.parentElement;
+    for (let d=0; d<6 && cur; d++) {
+      const tag = cur.tagName;
+      if (tag === "HEADER" || tag === "NAV" || tag === "ASIDE") return true;
+      const role = cur.getAttribute && cur.getAttribute("role");
+      if (role === "search" || role === "navigation" || role === "banner") return true;
+      cur = cur.parentElement;
+    }
+    return false;
   }
   function detectFields() {
     const all = [];
@@ -310,19 +328,23 @@
       if (seenEls.has(el)) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 4 || r.height < 4) continue;
-      if (el.tagName === "INPUT" && el.offsetWidth < 220 && IGNORE_PLACEHOLDER_RX.test(el.placeholder || "")) continue;
+      // Bloqueia campos de busca/filtro independente da largura
+      if (el.tagName === "INPUT" && isSearchInput(el)) continue;
       let label = findLabel(el);
       const isRich = el.tagName === "TEXTAREA"
         || el.getAttribute("contenteditable") === "true"
         || el.getAttribute("contenteditable") === ""
         || el.getAttribute("role") === "textbox"
         || /ql-editor|ProseMirror|DraftEditor|note-editable/.test(el.className || "");
-      if (!label && isRich) label = `Campo ${fields.length+1}`;
-      if (!label) continue;
-      if (IGNORE_LABEL_RX.test(label)) continue;
+      // Para inputs (não-rich) sem label real, pula. Para rich text, só mantém se já tiver pelo menos 1 campo rotulado de verdade.
+      if (!label) {
+        if (!isRich) continue;
+        // Não cria nomes "Campo N" — só atrapalham o matching da IA
+        continue;
+      }
+      if (isJunkLabel(label)) continue;
       const k = normalize(label);
       if (!k) continue;
-      // permite múltiplos campos com o mesmo label (raro, mas garante que nenhum seja perdido)
       let uniqueKey = k;
       let i = 2;
       while (seen.has(uniqueKey)) uniqueKey = `${k}__${i++}`;
