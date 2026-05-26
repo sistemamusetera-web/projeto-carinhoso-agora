@@ -496,7 +496,7 @@
         <textarea placeholder="Opcional: observações adicionais (intercorrências, recursos específicos...)"></textarea>
         <div class="evo-chat-actions">
           <button class="evo-btn-secondary evo-clear">Limpar</button>
-          <button class="evo-btn-primary evo-send">✨ Gerar e preencher</button>
+          <button type="button" class="evo-btn-primary evo-send">✨ Gerar e preencher</button>
         </div>
       </div>`;
     document.body.appendChild(panel);
@@ -624,8 +624,13 @@
     });
     $(".evo-clear").onclick = () => { state.selected.clear(); textarea.value=""; updateChips(); };
 
-    sendBtn.onclick = async (ev) => {
+    const handleSend = async (ev) => {
       try { ev && ev.preventDefault && ev.preventDefault(); } catch {}
+      // Feedback imediato: prova que o clique chegou
+      try {
+        state.msgs.push({ role:"system", content:"▶️ Clique recebido. Processando…" });
+        renderMsgs();
+      } catch {}
       try {
         const nomeManual = $(".evo-chat-paciente").value.trim();
         if (nomeManual) state.pacienteNome = nomeManual;
@@ -721,6 +726,16 @@
         renderMsgs();
       }
     };
+    // Debounce para evitar duplo disparo (touchend + click no iOS)
+    let _lastFire = 0;
+    const fireSend = (e) => {
+      const now = Date.now();
+      if (now - _lastFire < 700) { try{e&&e.preventDefault&&e.preventDefault();}catch{} return; }
+      _lastFire = now;
+      handleSend(e);
+    };
+    sendBtn.addEventListener("click", fireSend);
+    sendBtn.addEventListener("touchend", fireSend, { passive: false });
 
     renderMsgs();
     fieldsBox.innerHTML = "Rolando para detectar campos…";
