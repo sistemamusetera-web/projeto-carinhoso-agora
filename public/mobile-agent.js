@@ -434,6 +434,50 @@
       countEl.textContent = n ? ` (${n})` : "";
     }
 
+    // Tamanho persistente + ciclo S/M/G
+    const SIZES = [38, 60, 88];
+    const savedH = parseFloat(localStorage.getItem("evo_panel_h"));
+    if (savedH && savedH >= 20 && savedH <= 95) panel.style.setProperty("--evo-h", savedH + "vh");
+    $(".evo-size").onclick = () => {
+      const cur = parseFloat(getComputedStyle(panel).getPropertyValue("--evo-h")) || 55;
+      const next = SIZES.find(s => s > cur + 1) || SIZES[0];
+      panel.style.setProperty("--evo-h", next + "vh");
+      localStorage.setItem("evo_panel_h", String(next));
+      panel.classList.remove("min");
+    };
+    // Arrastar barra superior para redimensionar
+    const grip = $(".evo-grip");
+    let dragStartY = 0, dragStartH = 0;
+    const onMove = (e) => {
+      const y = e.touches ? e.touches[0].clientY : e.clientY;
+      const dy = y - dragStartY;
+      const newPx = Math.min(window.innerHeight * 0.92, Math.max(120, dragStartH - dy));
+      const vh = (newPx / window.innerHeight) * 100;
+      panel.style.setProperty("--evo-h", vh.toFixed(1) + "vh");
+    };
+    const onEnd = () => {
+      panel.classList.remove("dragging");
+      const vh = parseFloat(getComputedStyle(panel).getPropertyValue("--evo-h"));
+      if (vh) localStorage.setItem("evo_panel_h", String(vh));
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onEnd);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+    const onStart = (e) => {
+      panel.classList.remove("min");
+      dragStartY = e.touches ? e.touches[0].clientY : e.clientY;
+      dragStartH = panel.getBoundingClientRect().height;
+      panel.classList.add("dragging");
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onEnd);
+      window.addEventListener("touchmove", onMove, { passive: false });
+      window.addEventListener("touchend", onEnd);
+      e.preventDefault();
+    };
+    grip.addEventListener("mousedown", onStart);
+    grip.addEventListener("touchstart", onStart, { passive: false });
+
     $(".evo-close").onclick = () => panel.remove();
     $(".evo-min").onclick = () => panel.classList.toggle("min");
     $(".evo-redetect").onclick = async () => { fieldsBox.innerHTML="Rolando…"; await preScroll(); state.fields = detectFields(); renderFields(); };
