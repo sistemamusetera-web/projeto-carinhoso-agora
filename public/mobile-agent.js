@@ -393,18 +393,47 @@
   }
 
 
+  function activateEditor(el) {
+    try {
+      el.scrollIntoView({ block: "center" });
+      // Para editores lazy (Quill/ProseMirror/etc), um click+focus costuma materializar o contenteditable
+      const card = el.closest('[class*="field"], [class*="campo"], [class*="card"], [class*="editor"]') || el.parentElement;
+      try { card && card.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch {}
+      try { el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true })); } catch {}
+      try { el.dispatchEvent(new MouseEvent("click", { bubbles: true })); } catch {}
+      try { el.focus(); } catch {}
+    } catch {}
+  }
+
   function fillFields(camposResp, fields) {
     let n = 0;
+    const filled = new Set();
+    const respEntries = Object.entries(camposResp).filter(([k]) => !isSig(k));
     for (const f of fields) {
       if (isSig(f.nome)) continue;
       const k = normalize(f.nome);
       let val = null;
-      for (const [kk, vv] of Object.entries(camposResp)) {
-        if (isSig(kk)) continue;
+      let bestScore = 0;
+      for (const [kk, vv] of respEntries) {
+        if (filled.has(kk)) continue;
         const nk = normalize(kk);
-        if (nk === k || nk.includes(k) || k.includes(nk)) { val = vv; break; }
+        let score = 0;
+        if (nk === k) score = 100;
+        else if (nk.includes(k) || k.includes(nk)) score = 50;
+        else {
+          // matching por palavras em comum (>=2 palavras de >=4 chars)
+          const wk = new Set(k.split(" ").filter(w => w.length >= 4));
+          const wn = new Set(nk.split(" ").filter(w => w.length >= 4));
+          let common = 0;
+          for (const w of wk) if (wn.has(w)) common++;
+          if (common >= 2) score = 20 + common;
+        }
+        if (score > bestScore) { bestScore = score; val = vv; var chosenKey = kk; }
       }
-      if (val) { try { setNativeValue(f.el, val); n++; } catch {} }
+      if (val && bestScore > 0) {
+        activateEditor(f.el);
+        try { setNativeValue(f.el, val); n++; filled.add(chosenKey); } catch {}
+      }
     }
     return n;
   }
