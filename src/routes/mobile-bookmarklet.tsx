@@ -75,7 +75,9 @@ function Page() {
 
   const bookmarkletCore = useMemo(() => {
     if (!apiKey) return "";
-    const code = `(function(){window.__EVO_CFG={panelUrl:'${panelUrl}',apiKey:'${apiKey}'};var s=document.createElement('script');s.src='${panelUrl}/mobile-agent.js?v='+Date.now();document.body.appendChild(s);})();`;
+    // Usa fetch + eval em vez de <script src> para contornar CSP do site da clínica.
+    // Mostra alerta imediato para feedback visual no iPhone.
+    const code = `(function(){try{if(window.__EVO_MOBILE_LOADED){var ex=document.querySelector('.evo-chat');if(ex)ex.remove();window.__EVO_MOBILE_LOADED=false;}window.__EVO_CFG={panelUrl:'${panelUrl}',apiKey:'${apiKey}'};var u='${panelUrl}/mobile-agent.js?v='+Date.now();fetch(u).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();}).then(function(t){var s=document.createElement('script');s.textContent=t;document.documentElement.appendChild(s);}).catch(function(e){alert('Erro ao carregar agente: '+e.message+'\\n\\nVerifique sua conexao ou tente novamente.');});}catch(e){alert('Bookmarklet falhou: '+e.message);}})();`;
     return encodeURIComponent(code);
   }, [apiKey, panelUrl]);
   const bookmarklet = bookmarkletCore ? "javascript:" + bookmarkletCore : "";
