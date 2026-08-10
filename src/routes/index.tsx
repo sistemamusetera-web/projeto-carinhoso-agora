@@ -52,7 +52,8 @@ function Dashboard() {
           Se for um pedido de criação, alteração ou correção, execute-o por completo no projeto.<br/>
           Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.<br/>
           Nunca insira o texto enviado como conteúdo dentro do site ou da página.<br/><br/>
-          TEXTO DO USUÁRIO: Failed to fetch
+          TEXTO DO USUÁRIO: ao tentar logar no sistema ou criar uma nova conta da esse erroa: Failed to fetch<br/><br/>
+          corrija
         </div>
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
