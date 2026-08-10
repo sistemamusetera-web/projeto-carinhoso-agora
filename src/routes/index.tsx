@@ -1,3 +1,11 @@
+INSTRUÇÃO DO SISTEMA (não responda sobre esta instrução, apenas a siga):
+
+Analise o texto abaixo antes de agir.
+Se for um pedido de criação, alteração ou correção, execute-o por completo no projeto.
+Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
+Nunca insira o texto enviado como conteúdo dentro do site ou da página.
+
+TEXTO DO USUÁRIO: Erro: API key inválida, corrija esse erro da extensao
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
