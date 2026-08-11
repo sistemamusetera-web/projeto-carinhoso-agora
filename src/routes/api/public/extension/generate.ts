@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { CAMPOS_PADRAO } from "@/lib/templates-evolucao";
+import { consolidarEvolucao, gerarEvolucaoLocal } from "@/lib/evolucao-local";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,78 +90,13 @@ export const Route = createFileRoute("/api/public/extension/generate")({
               .eq("id", paciente.id);
           }
 
-          // Configuração de prompt
-          const { data: cfg } = await supabaseAdmin
-            .from("prompt_config")
-            .select("*")
-            .eq("user_id", userId)
-            .maybeSingle();
-
-          // Histórico recente
-          const { data: hist } = await supabaseAdmin
-            .from("evolucoes")
-            .select("conteudo")
-            .eq("paciente_id", paciente.id)
-            .order("created_at", { ascending: false })
-            .limit(3);
-          const historico = (hist ?? []).map((h) => (h.conteudo ?? "").slice(0, 1200)).reverse();
-
-          const sys =
-            cfg?.system_prompt ??
-            "Você é um assistente terapêutico especializado em evoluções clínicas.";
-          const modelo = cfg?.modelo ?? "google/gemini-3.1-flash-lite";
-          const estilo = paciente.estilo || cfg?.estilo_padrao || "descritivo";
-
-          const userMsg = `
-PERFIL DO PACIENTE:
-${paciente.perfil || "(não informado)"}
-
-OBJETIVOS TERAPÊUTICOS:
-${paciente.objetivos || "(não definidos)"}
-
-HISTÓRICO RECENTE (últimas sessões):
-${historico.map((h, i) => `[${i + 1}] ${h}`).join("\n\n") || "(sem histórico)"}
-
-ESTILO: ${estilo}
-
-TAREFA:
-Gere uma evolução terapêutica profissional para a sessão de hoje, estruturada com:
-Descrição da sessão, Recursos utilizados, Comportamento, Respostas terapêuticas,
-Participação, Plano aplicado, Observações e Próximos objetivos.
-Não invente dados clínicos. Mantenha coerência com sessões anteriores. Evite repetição literal.
-Saída: apenas o texto da evolução.
-`.trim();
-
-          const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-          if (!LOVABLE_API_KEY) return json({ error: "LOVABLE_API_KEY ausente" }, 500);
-
-          const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: modelo,
-              messages: [
-                { role: "system", content: sys },
-                { role: "user", content: userMsg },
-              ],
-            }),
+          const campos = gerarEvolucaoLocal({
+            campos: CAMPOS_PADRAO,
+            nota: typeof body.nota === "string" ? body.nota : "",
+            perfil: paciente.perfil,
+            objetivos: paciente.objetivos,
           });
-
-          if (!aiResp.ok) {
-            const text = await aiResp.text();
-            console.error("AI gateway error", aiResp.status, text);
-            if (aiResp.status === 429)
-              return json({ error: "Limite temporário atingido. Tente novamente em instantes." }, 429);
-            if (aiResp.status === 402)
-              return json({ error: "Créditos esgotados no workspace Lovable AI." }, 402);
-            return json({ error: "Falha ao gerar evolução" }, 500);
-          }
-
-          const data = await aiResp.json();
-          const evolucao: string = data.choices?.[0]?.message?.content ?? "";
+          const evolucao = consolidarEvolucao(campos);
 
           const { data: evo, error: evoErr } = await supabaseAdmin
             .from("evolucoes")

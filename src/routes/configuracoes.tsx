@@ -56,7 +56,6 @@ function ConfigPage() {
     mutationFn: async () => {
       const { error } = await supabase.from("prompt_config").update({
         system_prompt: promptForm.system_prompt,
-        modelo: promptForm.modelo,
         estilo_padrao: promptForm.estilo_padrao,
         terapeuta_nome: promptForm.terapeuta_nome ?? "",
         terapeuta_conselho: promptForm.terapeuta_conselho ?? "",
@@ -114,7 +113,7 @@ function ConfigPage() {
       <main className="container mx-auto px-4 py-10 space-y-8">
         <div>
           <h1 className="font-display text-3xl font-semibold">Configurações</h1>
-          <p className="mt-1 text-muted-foreground">Ajuste o prompt da IA, gerencie chaves da extensão e baixe o instalador.</p>
+          <p className="mt-1 text-muted-foreground">Gerencie a assinatura, as chaves da extensão e o instalador.</p>
         </div>
 
         {c && (
@@ -160,7 +159,7 @@ function ConfigPage() {
             <div className="flex-1">
               <h2 className="font-display text-xl font-semibold">Versão mobile (celular)</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Abra no seu celular para gerar evoluções com IA e copiar/colar no app do Clínica nas Nuvens.
+                Abra no seu celular para gerar evoluções localmente e copiar/colar no app do Clínica nas Nuvens.
                 Funciona em iOS e Android, sem instalar nada.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -237,31 +236,6 @@ function ConfigPage() {
             ))}
           </div>
         </Card>
-        {c && (
-          <Card className="p-6">
-            <h2 className="font-display text-xl font-semibold">Prompt e modelo</h2>
-            <div className="mt-4 space-y-4">
-              <div className="space-y-2"><Label>System prompt</Label>
-                <Textarea rows={8} value={c.system_prompt} onChange={(e) => setPromptForm({ ...c, system_prompt: e.target.value })} />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2"><Label>Modelo</Label>
-                  <Input value={c.modelo} onChange={(e) => setPromptForm({ ...c, modelo: e.target.value })} />
-                  <p className="text-xs text-muted-foreground">Ex.: google/gemini-3.1-flash-lite (mais econômico), google/gemini-3.6-flash</p>
-                </div>
-                <div className="space-y-2"><Label>Estilo padrão</Label>
-                  <Input value={c.estilo_padrao} onChange={(e) => setPromptForm({ ...c, estilo_padrao: e.target.value })} />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" disabled={!promptForm} onClick={() => setPromptForm(null)}>Cancelar</Button>
-                <Button disabled={!promptForm || savePrompt.isPending} onClick={() => savePrompt.mutate()} className="gap-1.5">
-                  <Save className="h-4 w-4" /> Salvar
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
       </main>
     </div>
   );

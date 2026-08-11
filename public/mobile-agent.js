@@ -713,7 +713,7 @@
         // Campos não-assinatura realmente detectados na página
         const camposDetectados = state.fields.filter(f=>!isSig(f.nome)).map(f=>f.nome);
         // Usa os labels reais; se nada, cai num conjunto padrão para gerar texto útil ao histórico
-        const camposParaIA = camposDetectados.length
+        const camposParaGeracao = camposDetectados.length
           ? camposDetectados
           : ["Descrição da sessão","Recursos utilizados","Comportamento","Respostas terapêuticas","Participação","Plano aplicado","Observações","Próximos objetivos"];
 
@@ -726,13 +726,13 @@
 
         sendBtn.disabled = true;
         sendBtn.textContent = "Gerando…";
-        setStatus(`Enviando para IA… (${camposDetectados.length} campo(s) detectado(s))`);
+        setStatus(`Gerando localmente… (${camposDetectados.length} campo(s) detectado(s))`);
 
         const data = await apiPost("/api/public/extension/chat-generate", {
           pacienteNome: state.pacienteNome,
           pacienteIdExterno: state.pacienteIdExterno,
           mensagens: state.msgs.filter(m=>m.role!=="system"),
-          campos: camposParaIA,
+          campos: camposParaGeracao,
         });
         const ther = data.terapeuta || {};
         state.terapeuta = ther;
@@ -770,7 +770,7 @@
 
         const resumo = nF
           ? `✅ Preenchi ${nF} de ${totalCampos} campo(s) do formulário + ${nT} da assinatura.`
-          : `⚠️ IA gerou ${blocos} bloco(s) e a evolução foi salva no histórico, mas nenhum campo bateu com o formulário. Abra a aba de evolução, toque ↻ e clique novamente. Campos detectados: ${state.fields.map(f=>f.nome).join(" · ") || "nenhum"}.`;
+          : `⚠️ O gerador criou ${blocos} bloco(s) e salvou a evolução no histórico, mas nenhum campo bateu com o formulário. Abra a aba de evolução, toque ↻ e clique novamente. Campos detectados: ${state.fields.map(f=>f.nome).join(" · ") || "nenhum"}.`;
         state.msgs.push({ role:"assistant", content: resumo });
         textarea.value = "";
         state.selected.clear();

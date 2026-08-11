@@ -14,6 +14,8 @@ import { ArrowLeft, Save, Sparkles, Trash2, Copy } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { CAMPOS_PADRAO } from "@/lib/templates-evolucao";
+import { consolidarEvolucao, gerarEvolucaoLocal } from "@/lib/evolucao-local";
 
 export const Route = createFileRoute("/pacientes/$id")({
   component: () => (<RequireAuth><PacienteDetail /></RequireAuth>),
@@ -68,15 +70,12 @@ function PacienteDetail() {
     if (!data) return;
     setGenerating(true);
     try {
-      const historico = data.evolucoes.slice(0, 5).map((x) => x.conteudo);
-      const { data: result, error } = await supabase.functions.invoke("gerar-evolucao", {
-        body: {
-          paciente: { nome: data.paciente.nome, perfil: data.paciente.perfil, objetivos: data.paciente.objetivos, estilo: data.paciente.estilo },
-          historico,
-        },
+      const campos = gerarEvolucaoLocal({
+        campos: CAMPOS_PADRAO,
+        perfil: data.paciente.perfil,
+        objetivos: data.paciente.objetivos,
       });
-      if (error) throw error;
-      const conteudo = (result as any).evolucao as string;
+      const conteudo = consolidarEvolucao(campos);
       const { error: insErr } = await supabase.from("evolucoes").insert({
         user_id: user!.id, paciente_id: id, conteudo, origem: "manual",
       });
@@ -137,7 +136,7 @@ function PacienteDetail() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <h3 className="font-display text-lg font-semibold">Gerar evolução agora</h3>
-                  <p className="mt-0.5 text-sm opacity-90">Usa perfil + últimas 5 sessões como contexto.</p>
+                  <p className="mt-0.5 text-sm opacity-90">Geração local com perfil e objetivos, sem consumo de créditos.</p>
                 </div>
                 <Button variant="secondary" disabled={generating} onClick={gerarEvolucao} className="gap-2">
                   <Sparkles className="h-4 w-4" />

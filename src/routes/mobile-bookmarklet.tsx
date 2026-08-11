@@ -205,7 +205,7 @@ function Page() {
                   <li>Entre no Clínica nas Nuvens pelo <b>Safari</b>.</li>
                   <li>Abra a tela de evolução do paciente.</li>
                   <li>Toque na barra de endereço → <b>Favoritos 📖</b> → <b>Agente de Evolução</b>.</li>
-                  <li>O painel verde abre e a IA preenche o formulário automaticamente. 🎉</li>
+                  <li>O painel verde abre e o gerador local preenche o formulário automaticamente. 🎉</li>
                 </ol>
               </div>
             </>
