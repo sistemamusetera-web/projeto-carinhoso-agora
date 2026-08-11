@@ -1,7 +1,7 @@
 {
   "name": "Evolução Terapêutica",
   "short_name": "Evolução",
-  "description": "Gere evoluções terapêuticas com IA pelo celular.",
+  "description": "Gere evoluções terapêuticas pelo celular sem consumo de créditos.",
   "start_url": "/mobile",
   "scope": "/",
   "display": "standalone",
