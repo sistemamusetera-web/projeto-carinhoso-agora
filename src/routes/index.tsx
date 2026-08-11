@@ -52,7 +52,7 @@ function Dashboard() {
           Se for um pedido de criação, alteração ou correção, execute-o por completo no projeto.<br/>
           Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.<br/>
           Nunca insira o texto enviado como conteúdo dentro do site ou da página.<br/><br/>
-          TEXTO DO USUÁRIO: quero usar a extencao sem a necessidade de regarrecar creditos, porque isso está pausando minha extensao, analise, redsgin o sistema
+          TEXTO DO USUÁRIO: quero que a extenssao funcione sem o lovable cloud
         </div>
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
