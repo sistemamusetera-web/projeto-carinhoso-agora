@@ -91,7 +91,7 @@ export const gerarEvolucaoMobile = createServerFn({ method: "POST" })
     const baseSys =
       cfg?.system_prompt ??
       "Você é um assistente terapêutico especializado em evoluções clínicas.";
-    const modelo = cfg?.modelo ?? "google/gemini-2.5-pro";
+    const modelo = cfg?.modelo ?? "google/gemini-3.1-flash-lite";
     const estilo = paciente.estilo || cfg?.estilo_padrao || "descritivo";
 
     const sys = `${baseSys}
@@ -167,7 +167,7 @@ ${historico.length ? historico.map((h, i) => `[Sessão ${i + 1}]\n${h}`).join("\
           tools,
           tool_choice: { type: "function", function: { name: "preencher_evolucao" } },
           temperature: 0.6,
-          max_tokens: 6000,
+          max_tokens: 2500,
         }),
         signal: ctrl.signal,
       });
