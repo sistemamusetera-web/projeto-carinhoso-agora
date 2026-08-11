@@ -52,7 +52,7 @@ function Dashboard() {
           Se for um pedido de criação, alteração ou correção, execute-o por completo no projeto.<br/>
           Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.<br/>
           Nunca insira o texto enviado como conteúdo dentro do site ou da página.<br/><br/>
-          TEXTO DO USUÁRIO: o erro continua de Failed to fetch, estou logado no 4g, loguei com a janela ananima e mesmo o o erro continua
+          TEXTO DO USUÁRIO: ao tentar criar uma conta no sistema ou logar uma conta existente da erro,: Failed to fetch,
         </div>
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
