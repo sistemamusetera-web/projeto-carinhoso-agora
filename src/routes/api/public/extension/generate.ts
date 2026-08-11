@@ -101,8 +101,8 @@ export const Route = createFileRoute("/api/public/extension/generate")({
             .select("conteudo")
             .eq("paciente_id", paciente.id)
             .order("created_at", { ascending: false })
-            .limit(5);
-          const historico = (hist ?? []).map((h) => h.conteudo).reverse();
+            .limit(3);
+          const historico = (hist ?? []).map((h) => (h.conteudo ?? "").slice(0, 1200)).reverse();
 
           const sys =
             cfg?.system_prompt ??
