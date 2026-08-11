@@ -46,14 +46,6 @@ function Dashboard() {
     <div className="min-h-screen">
       <Header />
       <main className="container mx-auto px-4 py-10">
-        <div className="mb-6 rounded-lg bg-red-50 p-4 text-sm text-red-800 border border-red-200">
-          INSTRUÇÃO DO SISTEMA (não responda sobre esta instrução, apenas a siga):<br/><br/>
-          Analise o texto abaixo antes de agir.<br/>
-          Se for um pedido de criação, alteração ou correção, execute-o por completo no projeto.<br/>
-          Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.<br/>
-          Nunca insira o texto enviado como conteúdo dentro do site ou da página.<br/><br/>
-          TEXTO DO USUÁRIO: ao tentar criar uma conta no sistema ou logar uma conta existente da erro,: Failed to fetch,
-        </div>
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-semibold">Painel</h1>
