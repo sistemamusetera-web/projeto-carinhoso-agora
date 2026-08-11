@@ -90,13 +90,6 @@ export const Route = createFileRoute("/api/public/extension/generate")({
               .eq("id", paciente.id);
           }
 
-          // Configuração de prompt
-          const { data: cfg } = await supabaseAdmin
-            .from("prompt_config")
-            .select("*")
-            .eq("user_id", userId)
-            .maybeSingle();
-
           const campos = gerarEvolucaoLocal({
             campos: CAMPOS_PADRAO,
             nota: typeof body.nota === "string" ? body.nota : "",
