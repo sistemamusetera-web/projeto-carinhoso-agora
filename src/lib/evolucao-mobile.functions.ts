@@ -3,13 +3,6 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { consolidarEvolucao, gerarEvolucaoLocal } from "@/lib/evolucao-local";
 
-const InputSchema = z.object({
-  pacienteId: z.string().uuid().nullable().optional(),
-  pacienteNome: z.string().min(1).max(255),
-  nota: z.string().max(8000).default(""),
-  campos: z.array(z.string().min(1).max(120)).min(1).max(20),
-});
-
 export const listarPacientesMobile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -40,7 +33,12 @@ export const obterTerapeutaMobile = createServerFn({ method: "GET" })
 
 export const gerarEvolucaoMobile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input) => InputSchema.parse(input))
+  .inputValidator((input) => z.object({
+    pacienteId: z.string().uuid().nullable().optional(),
+    pacienteNome: z.string().min(1).max(255),
+    nota: z.string().max(8000).default(""),
+    campos: z.array(z.string().min(1).max(120)).min(1).max(20),
+  }).parse(input))
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
