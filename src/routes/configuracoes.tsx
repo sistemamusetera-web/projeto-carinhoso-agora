@@ -247,7 +247,7 @@ function ConfigPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2"><Label>Modelo</Label>
                   <Input value={c.modelo} onChange={(e) => setPromptForm({ ...c, modelo: e.target.value })} />
-                  <p className="text-xs text-muted-foreground">Ex.: google/gemini-2.5-flash, openai/gpt-5-mini</p>
+                  <p className="text-xs text-muted-foreground">Ex.: google/gemini-3.1-flash-lite (mais econômico), google/gemini-3.6-flash</p>
                 </div>
                 <div className="space-y-2"><Label>Estilo padrão</Label>
                   <Input value={c.estilo_padrao} onChange={(e) => setPromptForm({ ...c, estilo_padrao: e.target.value })} />

@@ -101,13 +101,13 @@ export const Route = createFileRoute("/api/public/extension/generate")({
             .select("conteudo")
             .eq("paciente_id", paciente.id)
             .order("created_at", { ascending: false })
-            .limit(5);
-          const historico = (hist ?? []).map((h) => h.conteudo).reverse();
+            .limit(3);
+          const historico = (hist ?? []).map((h) => (h.conteudo ?? "").slice(0, 1200)).reverse();
 
           const sys =
             cfg?.system_prompt ??
             "Você é um assistente terapêutico especializado em evoluções clínicas.";
-          const modelo = cfg?.modelo ?? "google/gemini-2.5-flash";
+          const modelo = cfg?.modelo ?? "google/gemini-3.1-flash-lite";
           const estilo = paciente.estilo || cfg?.estilo_padrao || "descritivo";
 
           const userMsg = `
