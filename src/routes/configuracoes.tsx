@@ -63,7 +63,7 @@ function ConfigPage() {
         terapeuta_conselho: promptForm.terapeuta_conselho ?? "",
         terapeuta_especialidade: promptForm.terapeuta_especialidade ?? "",
         gemini_api_key: promptForm.gemini_api_key,
-      }).eq("user_id", user!.id);
+      } as any).eq("user_id", user!.id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Configurações salvas"); qc.invalidateQueries({ queryKey: ["prompt_config"] }); setPromptForm(null); },
