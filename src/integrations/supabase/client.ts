@@ -3,19 +3,31 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+  // Check for external configuration in localStorage
+  let externalUrl = null;
+  let externalKey = null;
+
+  if (typeof window !== 'undefined') {
+    externalUrl = localStorage.getItem('EXTERNAL_SUPABASE_URL');
+    externalKey = localStorage.getItem('EXTERNAL_SUPABASE_ANON_KEY');
+  }
+
+  // Use external if provided, otherwise use environment variables
+  const SUPABASE_URL = externalUrl || import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = externalKey || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
       ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
       ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud or provide an external URL in Settings.`;
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
+  }
+
+  if (externalUrl && typeof window !== 'undefined') {
+    console.log(`[Supabase] Using external database: ${externalUrl}`);
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
