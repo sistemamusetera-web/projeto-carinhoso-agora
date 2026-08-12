@@ -55,7 +55,7 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
           }
 
           const userId = keyRow.user_id;
-          let body = {};
+          let body: any = {};
           try {
             const text = await request.text();
             body = text ? JSON.parse(text) : {};
