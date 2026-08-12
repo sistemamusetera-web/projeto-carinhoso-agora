@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { consolidarEvolucao, gerarEvolucaoLocal } from "@/lib/evolucao-local";
+import { gerarEvolucaoGemini } from "@/lib/gemini/service";
 
 export const listarPacientesMobile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -43,7 +43,6 @@ export const gerarEvolucaoMobile = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Resolve / cria paciente usando admin (já validamos user via middleware)
     let paciente: any = null;
     if (data.pacienteId) {
       const { data: p } = await supabaseAdmin
@@ -79,22 +78,32 @@ export const gerarEvolucaoMobile = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .maybeSingle();
 
-    const camposOut = gerarEvolucaoLocal({ campos: data.campos, nota: data.nota, perfil: paciente.perfil, objetivos: paciente.objetivos });
-    const consolidado = consolidarEvolucao(camposOut);
+    const geminiResp = await gerarEvolucaoGemini({
+      apiKey: (cfg as any)?.gemini_api_key ?? "",
+      campos: data.campos,
+      nota: data.nota,
+      perfil: paciente.perfil,
+      objetivos: paciente.objetivos,
+      terapeuta: {
+        nome: cfg?.terapeuta_nome ?? "",
+        conselho: cfg?.terapeuta_conselho ?? "",
+        especialidade: cfg?.terapeuta_especialidade ?? "",
+      }
+    });
 
     const { data: evo } = await supabaseAdmin
       .from("evolucoes")
       .insert({
         user_id: userId,
         paciente_id: paciente.id,
-        conteudo: consolidado,
+        conteudo: geminiResp.consolidado,
         origem: "mobile-pwa",
       })
       .select()
       .single();
 
     return {
-      campos: camposOut,
+      campos: geminiResp.campos,
       evolucaoId: evo?.id ?? null,
       pacienteId: paciente.id,
       pacienteNome: paciente.nome,

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { consolidarEvolucao, gerarEvolucaoLocal } from "@/lib/evolucao-local";
+import { gerarEvolucaoGemini } from "@/lib/gemini/service";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +55,6 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
           if (!pacienteNome) return json({ error: "pacienteNome obrigatório" }, 400);
           if (!campos.length) return json({ error: "campos obrigatório" }, 400);
 
-          // Resolve paciente
           let paciente: any = null;
           if (pacienteIdExterno) {
             const { data } = await supabaseAdmin
@@ -96,16 +95,27 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
             .eq("user_id", userId)
             .maybeSingle();
 
-          const nota = mensagens.filter((mensagem) => mensagem.role === "user").map((mensagem) => mensagem.content).join("\n");
-          const camposOut = gerarEvolucaoLocal({ campos, nota, perfil: paciente.perfil, objetivos: paciente.objetivos });
-          const consolidado = consolidarEvolucao(camposOut);
+          const nota = mensagens.filter((m) => m.role === "user").map((m) => m.content).join("\n");
+          
+          const geminiResp = await gerarEvolucaoGemini({
+            apiKey: (cfg as any)?.gemini_api_key ?? "",
+            campos,
+            nota,
+            perfil: paciente.perfil,
+            objetivos: paciente.objetivos,
+            terapeuta: {
+              nome: cfg?.terapeuta_nome ?? "",
+              conselho: cfg?.terapeuta_conselho ?? "",
+              especialidade: cfg?.terapeuta_especialidade ?? "",
+            }
+          });
 
           const { data: evo } = await supabaseAdmin
             .from("evolucoes")
             .insert({
               user_id: userId,
               paciente_id: paciente.id,
-              conteudo: consolidado,
+              conteudo: geminiResp.consolidado,
               origem: "extensao-chat",
             })
             .select()
@@ -117,7 +127,7 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
             .eq("id", keyRow.id);
 
           return json({
-            campos: camposOut,
+            campos: geminiResp.campos,
             evolucaoId: evo?.id,
             pacienteId: paciente.id,
             pacienteNome: paciente.nome,
