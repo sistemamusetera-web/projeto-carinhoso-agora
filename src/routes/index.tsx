@@ -6,63 +6,8 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  * 
- * TEXTO DO USUÁRIO: erro na extenssao ao clicar no botao de preencher:
- * 
- * <!DOCTYPE html>
- * <html lang="pt-br">
- * 	
- * 
- *     
- * 
- * 	
- * 
- * <!--begin::Head-->
- * <head>
- * 	<meta charset="utf-8" />
- * 	<title>Clínica nas Nuvens</title>
- * 	<meta name="descr
- * Selecione ao menos um template ou descreva a sessão antes de gerar.
- * paciente tem otima interacao e criacao melodica no teclado
- * Erro: 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- *     
- * 
- *     
- * 
- *     
- *         
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * 
- * <!DOCTYPE html>
- * <html lang="pt-br">
- * 	
- * 
- *     
- * 
- * 	
- * 
- * <!--begin::Head-->
- * <head>
- * 	<meta charset="utf-8" />
- * 	<title>Clínica nas Nuvens</title>
- * 	<meta name="descr
+ * TEXTO DO USUÁRIO: Erro de Conexão
+ * Could not find the table 'public.pacientes' in the schema cache
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
