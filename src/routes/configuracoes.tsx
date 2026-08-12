@@ -412,7 +412,7 @@ function ConfigPage() {
                     <code className="flex-1 break-all rounded bg-background p-2 text-xs border border-border">
                       {window.location.origin}
                     </code>
-                    <Button size="icon" variant="outline" size="sm" onClick={() => { 
+                    <Button size="icon" variant="outline" onClick={() => { 
                       navigator.clipboard.writeText(window.location.origin); 
                       toast.success("URL copiada"); 
                     }}>
