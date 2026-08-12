@@ -6,8 +6,10 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  * 
- * TEXTO DO USUÁRIO: Erro de Conexão
- * Could not find the table 'public.pacientes' in the schema cache
+ * TEXTO DO USUÁRIO: ao tentar fazer o login, Erro de Conexão (DNS). 
+ * Quero que minha extensão fique conectada ao supabase e remova totalmente do lovable cloud.
+ * URL: https://mrtafmiitakyddlzbjdj.supabase.co
+ * Key: sb_publishable_mAQgfH9hYtx_RPlkB4Yh-Q_NSScmbp3
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";

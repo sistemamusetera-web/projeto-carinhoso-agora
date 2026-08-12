@@ -96,11 +96,34 @@ function LoginPage() {
               <AlertTitle>Erro de Conexão</AlertTitle>
               <AlertDescription className="text-xs space-y-2">
                 <p>O sistema não conseguiu localizar o servidor de autenticação (Erro de DNS).</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li>O serviço do banco de dados pode estar temporariamente <strong>pausado ou em manutenção</strong>.</li>
-                  <li>Clique em <strong>"View Backend"</strong> no topo do painel do Lovable para verificar se o serviço está ativo.</li>
-                  <li>Se você tiver créditos expirados ou serviços pausados, o backend pode ficar offline.</li>
-                </ul>
+                
+                {localStorage.getItem('EXTERNAL_SUPABASE_URL') ? (
+                  <>
+                    <p className="font-semibold text-amber-600 dark:text-amber-400 mt-2">Você está usando um Supabase Externo.</p>
+                    <p>Verifique se o seu projeto em <strong>{localStorage.getItem('EXTERNAL_SUPABASE_URL')}</strong> está ativo e se a chave Anon está correta.</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full mt-2 text-[10px]"
+                      onClick={() => {
+                        localStorage.removeItem('EXTERNAL_SUPABASE_URL');
+                        localStorage.removeItem('EXTERNAL_SUPABASE_ANON_KEY');
+                        window.location.reload();
+                      }}
+                    >
+                      Remover Banco Externo e Usar Padrão
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li>O serviço do banco de dados pode estar temporariamente <strong>pausado ou em manutenção</strong>.</li>
+                      <li>Clique em <strong>"View Backend"</strong> no topo do painel do Lovable para verificar se o serviço está ativo.</li>
+                      <li>Se você tiver créditos expirados ou serviços pausados, o backend pode ficar offline.</li>
+                    </ul>
+                  </>
+                )}
+
                 <div className="flex flex-col gap-2 mt-4">
                   <Button 
                     variant="default" 
