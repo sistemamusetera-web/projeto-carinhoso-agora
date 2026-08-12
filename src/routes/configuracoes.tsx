@@ -400,35 +400,70 @@ function ConfigPage() {
             </Button>
           </div>
 
-          {newKey && (
-            <div className="mt-4 rounded-lg border border-success/40 bg-success/10 p-4">
-              <div className="text-sm font-medium text-foreground">Copie agora — não será mostrada novamente:</div>
-              <div className="mt-2 flex items-center gap-2">
-                <code className="flex-1 break-all rounded bg-background p-2 text-xs">{newKey}</code>
-                <Button size="icon" variant="outline" onClick={() => { navigator.clipboard.writeText(newKey); toast.success("Copiado"); }}>
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              <Button variant="ghost" size="sm" className="mt-2" onClick={() => setNewKey(null)}>Ok, anotei</Button>
-            </div>
-          )}
-
-          <div className="mt-4 space-y-2">
-            {!keys?.length && <div className="text-sm text-muted-foreground">Nenhuma chave criada ainda.</div>}
-            {keys?.map((k) => (
-              <div key={k.id} className="flex items-center justify-between rounded-md border border-border p-3">
-                <div className="flex items-center gap-3">
-                  <Key className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <div className="font-mono text-sm">{k.key_prefix}…</div>
-                    <div className="text-xs text-muted-foreground">{k.last_used_at ? `Usada por último: ${new Date(k.last_used_at).toLocaleString("pt-BR")}` : "Nunca usada"}</div>
+          <div className="mt-4 space-y-4">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Smartphone className="h-4 w-4" /> Dados para configurar na extensão:
+              </h3>
+              <div className="mt-3 space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground uppercase">URL do Painel (copie sem a barra final):</Label>
+                  <div className="flex gap-2">
+                    <code className="flex-1 break-all rounded bg-background p-2 text-xs border border-border">
+                      {window.location.origin}
+                    </code>
+                    <Button size="icon" variant="outline" size="sm" onClick={() => { 
+                      navigator.clipboard.writeText(window.location.origin); 
+                      toast.success("URL copiada"); 
+                    }}>
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => deleteKey.mutate(k.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                
+                {newKey && (
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground uppercase">Chave de API (cole na extensão):</Label>
+                    <div className="flex gap-2">
+                      <code className="flex-1 break-all rounded bg-background p-2 text-xs border border-success/40 text-success-foreground">
+                        {newKey}
+                      </code>
+                      <Button size="icon" variant="outline" size="sm" onClick={() => { 
+                        navigator.clipboard.writeText(newKey); 
+                        toast.success("Chave copiada"); 
+                      }}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-amber-600 mt-1">Copie agora — por segurança, esta chave não será mostrada novamente.</p>
+                  </div>
+                )}
               </div>
-            ))}
+              {!newKey && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Gere uma nova chave abaixo se precisar configurar uma nova instalação.
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <Label className="text-sm font-medium">Suas Chaves Ativas</Label>
+              {!keys?.length && <div className="text-sm text-muted-foreground">Nenhuma chave ativa encontrada.</div>}
+              {keys?.map((k) => (
+                <div key={k.id} className="flex items-center justify-between rounded-md border border-border p-3">
+                  <div className="flex items-center gap-3">
+                    <Key className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="font-mono text-sm">{k.key_prefix}…</div>
+                      <div className="text-xs text-muted-foreground">{k.last_used_at ? `Último uso: ${new Date(k.last_used_at).toLocaleString("pt-BR")}` : "Nunca usada"}</div>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => deleteKey.mutate(k.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           </div>
         </Card>
       </main>
