@@ -36,11 +36,16 @@ export const Route = createFileRoute("/api/public/extension/generate")({
           if (!apiKey) return json({ error: "API key ausente" }, 401);
 
           const hash = await sha256(apiKey);
-          const { data: keyRow } = await supabaseAdmin
+          const { data: keyRow, error: keyError } = await supabaseAdmin
             .from("api_keys")
             .select("id, user_id")
             .eq("key_hash", hash)
             .maybeSingle();
+
+          if (keyError) {
+            console.error("[API Key Check Error]:", keyError);
+            return json({ error: "Erro ao validar chave: " + keyError.message }, 500);
+          }
           if (!keyRow) return json({ error: "API key inválida" }, 401);
 
           const userId = keyRow.user_id;
