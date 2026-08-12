@@ -44,12 +44,14 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
             .maybeSingle();
 
           if (keyError) {
-            console.error("[API Key Check Error]:", keyError);
-            return json({ error: `Erro ao validar chave (Supabase): ${keyError.message} (code: ${keyError.code})` }, 500);
+            console.error("[Extension Chat Generate] Supabase Error:", keyError);
+            return json({ 
+              error: `Erro ao validar chave no Supabase Externo: ${keyError.message} (code: ${keyError.code}). Verifique se a tabela 'api_keys' existe e tem permissão SELECT para service_role.` 
+            }, 500);
           }
           if (!keyRow) {
             console.warn("[Extension Chat Generate] Key not found for hash:", hash);
-            return json({ error: "API key inválida ou não encontrada no banco de dados." }, 401);
+            return json({ error: "API key não encontrada. Certifique-se de gerar uma nova chave após configurar o banco externo." }, 401);
           }
 
           const userId = keyRow.user_id;
