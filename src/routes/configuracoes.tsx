@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Key, Plus, Trash2, Copy, Download, Save, Smartphone } from "lucide-react";
+import { Key, Plus, Trash2, Copy, Download, Save, Smartphone, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
@@ -28,6 +28,7 @@ function ConfigPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [newKey, setNewKey] = useState<string | null>(null);
+  const [promptForm, setPromptForm] = useState<any>(null);
   const [geminiKey, setGeminiKey] = useState("");
   const [showGemini, setShowGemini] = useState(false);
 
