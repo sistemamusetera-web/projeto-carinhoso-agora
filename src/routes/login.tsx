@@ -95,20 +95,22 @@ function LoginPage() {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Erro de Conexão</AlertTitle>
               <AlertDescription className="text-xs space-y-2">
-                <p>O sistema não conseguiu se conectar ao servidor de autenticação.</p>
+                <p>O sistema não conseguiu localizar o servidor de autenticação (Erro de DNS).</p>
                 <ul className="list-disc pl-4 space-y-1">
-                  <li>Verifique se sua internet está ativa.</li>
-                  <li>Desative bloqueadores de anúncios (AdBlock) ou VPNs.</li>
-                  <li>Tente recarregar a página.</li>
+                  <li>O serviço do banco de dados pode estar temporariamente <strong>pausado ou em manutenção</strong>.</li>
+                  <li>Clique em <strong>"View Backend"</strong> no topo do painel do Lovable para verificar se o serviço está ativo.</li>
+                  <li>Se você tiver créditos expirados ou serviços pausados, o backend pode ficar offline.</li>
                 </ul>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2 w-full h-8 text-xs gap-2"
-                  onClick={() => window.location.reload()}
-                >
-                  <RefreshCw className="h-3 w-3" /> Recarregar página
-                </Button>
+                <div className="flex flex-col gap-2 mt-4">
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="w-full h-9 text-xs gap-2"
+                    onClick={() => window.location.reload()}
+                  >
+                    <RefreshCw className="h-3 w-3" /> Tentar novamente agora
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}
