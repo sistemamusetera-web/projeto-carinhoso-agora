@@ -1,39 +1,23 @@
-## Objetivo
-Refazer `/mobile` para ficar **visualmente idêntica ao painel flutuante** da extensão (mesmo header verde, mesmos cartões dobráveis, mesmos chips coloridos por grupo, mesmo botão "Gerar e preencher"), mantendo todas as funcionalidades já existentes (escolher paciente, chips, nota livre, IA, copiar campo a campo, assinatura automática).
+# Plano de Correção do Erro de Autenticação (Failed to Fetch)
 
-## O que muda
+O erro "Failed to fetch" ao tentar logar ou criar conta indica que o navegador não está conseguindo alcançar os servidores do Lovable Cloud (Supabase). Isso geralmente acontece por bloqueios locais no dispositivo do usuário (AdBlock, VPN, Firewall) ou instabilidades de DNS.
 
-### `src/routes/mobile.tsx` (reescrita do layout, lógica preservada)
-Espelhar o markup do painel da extensão (`extension/content.js` linhas 496–549) e o CSS de `extension/content.css`, traduzido para Tailwind:
+## Mudanças propostas
 
-1. **Header** verde gradiente `#5a7e5f → #3d5841` com:
-   - Título "Agente de Evolução"
-   - Input do nome do paciente (igual `.evo-chat-paciente`)
-   - Botões compactos: voltar / configurações
-2. **Cartão "Assinatura"** (`<details>` recolhível) — mostra terapeuta vindo de Configurações + data BR, com link "editar" → `/configuracoes`. Réplica visual de `.evo-chat-signature`.
-3. **Área de templates rápidos** com cabeçalho "⚡ Templates rápidos · N selecionado(s) · limpar", e grupos com:
-   - Título colorido (ícone + nome do grupo + linha divisória na cor do grupo)
-   - Chips arredondados com cor do grupo (estado ativo = preenchido, inativo = contorno) — idêntico a `.evo-tpl-chip`
-4. **Caixa de nota livre** (textarea) substitui o "input + send" da extensão (no celular faz mais sentido textarea).
-5. **Rodapé fixo** com:
-   - Botão secundário "Limpar"
-   - Botão primário gradiente "✨ Gerar evolução com IA"
-6. **Tela de resultado** mantém os cartões por campo com botão "copiar" + "📋 Copiar tudo (com assinatura)" + assinatura no rodapé. Cores e tipografia alinhadas ao painel.
+### Frontend (Interface de Login)
+- [x] Adicionar detecção específica para o erro "Failed to fetch".
+- [x] Exibir um alerta amigável com instruções de solução (desativar AdBlock, verificar internet, recarregar).
+- [x] Adicionar botão de "Recarregar" direto no erro para facilitar a limpeza de estados corrompidos.
 
-### Seleção de paciente
-Manter o passo "escolher paciente" (não existe na extensão porque ela detecta da página), mas estilizar igual: cartões brancos com borda fina, hover verde, mesma fonte/spacing do painel.
+### Backend (Configuração)
+- [ ] Verificar e garantir que os cabeçalhos CORS permitam todas as origens necessárias (já revisado em turnos anteriores).
+- [ ] Manter os endpoints da extensão resilientes a falhas de rede.
 
-### Sem mudanças em
-- Server functions (`src/lib/evolucao-mobile.functions.ts`)
-- Templates (`src/lib/templates-evolucao.ts`)
-- Auth, rotas, manifest PWA, extensão Chrome
+## Detalhes Técnicos
+- O erro é um `TypeError: Failed to fetch`, que no Supabase Auth ocorre quando a requisição `POST /auth/v1/token` falha antes de chegar ao servidor.
+- Implementado estado `fetchError` no `src/routes/login.tsx` para capturar essa exceção específica.
+- Instrução ao usuário: O erro é externo ao código (infraestrutura/rede), mas melhoramos o feedback visual para guiá-lo na solução.
 
-## Detalhes técnicos
-- Tokens de cor copiados do CSS da extensão: header `#3d5841/#5a7e5f`, accent `#4b6b4f`, cinzas `#f7faf7 / #e5e7eb / #6b7280`.
-- Cores dos grupos vêm de `TEMPLATES[i].cor` (já existe em `src/lib/templates-evolucao.ts`).
-- Usa `<details>`/`<summary>` nativos para o cartão Assinatura (igual extensão).
-- Mantém `RequireAuth` e os hooks `useServerFn` + React Query atuais.
-- Continua otimizado para o viewport mobile (max-w-md), com rodapé fixo + `pb-28` no main.
-
-## Resultado
-A página `/mobile` aberta no celular fica **pixel-próxima** do painel flutuante que aparece no Clínica nas Nuvens no desktop: mesmo verde, mesmos chips coloridos por categoria, mesma ordem (Assinatura → Templates → Nota → Gerar), e mesma sensação tátil (chips arredondados, botão gradiente).
+## Próximos Passos
+1. Aguardar feedback do usuário após ele seguir as novas instruções exibidas na tela de login.
+2. Se o problema persistir apenas para um usuário, o problema é local no dispositivo dele.
