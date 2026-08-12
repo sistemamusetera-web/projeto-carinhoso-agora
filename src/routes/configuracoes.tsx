@@ -189,6 +189,7 @@ function ConfigPage() {
               <Sparkles className="h-3 w-3" /> Chave configurada e ativa
             </div>
           )}
+        </Card>
 
         <Card className="p-6">
           <h2 className="font-display text-xl font-semibold">Extensão Chrome</h2>
