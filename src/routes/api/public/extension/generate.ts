@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { CAMPOS_PADRAO } from "@/lib/templates-evolucao";
-import { consolidarEvolucao, gerarEvolucaoLocal } from "@/lib/evolucao-local";
+import { gerarEvolucaoGemini } from "@/lib/gemini/service";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,7 +51,6 @@ export const Route = createFileRoute("/api/public/extension/generate")({
             : null;
           if (!pacienteNome) return json({ error: "pacienteNome obrigatório" }, 400);
 
-          // Busca paciente por nome_externo_id ou nome
           let paciente: any = null;
           if (pacienteIdExterno) {
             const { data } = await supabaseAdmin
@@ -90,20 +89,31 @@ export const Route = createFileRoute("/api/public/extension/generate")({
               .eq("id", paciente.id);
           }
 
-          const campos = gerarEvolucaoLocal({
+          const { data: cfg } = await supabaseAdmin
+            .from("prompt_config")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          const geminiResp = await gerarEvolucaoGemini({
+            apiKey: (cfg as any)?.gemini_api_key ?? "",
             campos: CAMPOS_PADRAO,
             nota: typeof body.nota === "string" ? body.nota : "",
             perfil: paciente.perfil,
             objetivos: paciente.objetivos,
+            terapeuta: {
+              nome: cfg?.terapeuta_nome ?? "",
+              conselho: cfg?.terapeuta_conselho ?? "",
+              especialidade: cfg?.terapeuta_especialidade ?? "",
+            }
           });
-          const evolucao = consolidarEvolucao(campos);
 
           const { data: evo, error: evoErr } = await supabaseAdmin
             .from("evolucoes")
             .insert({
               user_id: userId,
               paciente_id: paciente.id,
-              conteudo: evolucao,
+              conteudo: geminiResp.consolidado,
               origem: "extensao",
             })
             .select()
@@ -116,7 +126,7 @@ export const Route = createFileRoute("/api/public/extension/generate")({
             .eq("id", keyRow.id);
 
           return json({
-            evolucao,
+            evolucao: geminiResp.consolidado,
             evolucaoId: evo.id,
             pacienteId: paciente.id,
             pacienteNome: paciente.nome,
