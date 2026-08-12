@@ -6,10 +6,8 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  * 
- * TEXTO DO USUÁRIO: ao tentar fazer o login, Erro de Conexão (DNS). 
- * Quero que minha extensão fique conectada ao supabase e remova totalmente do lovable cloud.
- * URL: https://mrtafmiitakyddlzbjdj.supabase.co
- * Key: sb_publishable_mAQgfH9hYtx_RPlkB4Yh-Q_NSScmbp3
+ * TEXTO DO USUÁRIO: ao clicar no botao da extenssao gerar e prencher n está carregando e da esse erro: 
+ * Erro: [HTML da Clínica nas Nuvens]
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
