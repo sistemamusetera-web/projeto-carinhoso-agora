@@ -35,6 +35,8 @@ function ConfigPage() {
   const [extUrl, setExtUrl] = useState(localStorage.getItem('EXTERNAL_SUPABASE_URL') || "");
   const [extKey, setExtKey] = useState(localStorage.getItem('EXTERNAL_SUPABASE_ANON_KEY') || "");
   const [showExternalDB, setShowExternalDB] = useState(false);
+  const [dbStatus, setDbStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [dbError, setDbError] = useState<string | null>(null);
 
   const { data: cfg } = useQuery({
     queryKey: ["prompt_config", user?.id],
@@ -273,12 +275,32 @@ function ConfigPage() {
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={() => setShowExternalDB(!showExternalDB)}>
-              {localStorage.getItem('EXTERNAL_SUPABASE_URL') ? "Alterar Conexão" : "Configurar"}
+              {localStorage.getItem('EXTERNAL_SUPABASE_URL') ? "Gerenciar Conexão" : "Configurar"}
             </Button>
           </div>
 
           {showExternalDB && (
             <div className="mt-4 space-y-4 border-t pt-4">
+              {dbStatus === "success" && (
+                <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
+                  <Sparkles className="h-4 w-4 text-green-600" />
+                  <AlertTitle className="text-green-800 dark:text-green-400">Conexão Bem-sucedida!</AlertTitle>
+                  <AlertDescription className="text-green-700 dark:text-green-500">
+                    O sistema conseguiu se comunicar com o seu Supabase externo.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {dbStatus === "error" && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Erro de Conexão</AlertTitle>
+                  <AlertDescription>
+                    {dbError || "Não foi possível conectar ao banco de dados externo. Verifique a URL e a Chave Anon."}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Supabase URL</Label>
@@ -313,17 +335,52 @@ function ConfigPage() {
                       Remover e Usar Padrão
                     </Button>
                   )}
-                  <Button size="sm" onClick={() => {
-                    if (!extUrl || !extKey) {
-                      toast.error("Preencha URL e Chave");
-                      return;
-                    }
-                    localStorage.setItem('EXTERNAL_SUPABASE_URL', extUrl.trim());
-                    localStorage.setItem('EXTERNAL_SUPABASE_ANON_KEY', extKey.trim());
-                    toast.success("Configuração salva! Recarregando...");
-                    setTimeout(() => window.location.reload(), 1000);
-                  }}>
-                    Salvar e Conectar
+                  <Button 
+                    size="sm" 
+                    disabled={dbStatus === "testing"}
+                    onClick={async () => {
+                      if (!extUrl || !extKey) {
+                        toast.error("Preencha URL e Chave");
+                        return;
+                      }
+                      
+                      setDbStatus("testing");
+                      setDbError(null);
+                      
+                      try {
+                        const tempClient = (await import('@supabase/supabase-js')).createClient(extUrl.trim(), extKey.trim());
+                        const { error } = await tempClient.from('pacientes').select('id').limit(1);
+                        
+                        if (error && error.code !== 'PGRST116' && error.message !== 'JSON object requested, multiple (or no) rows returned') {
+                          // Se o erro for que a tabela não existe, ainda é uma conexão bem-sucedida com o Supabase
+                          if (error.code === '42P01') {
+                            toast.info("Conectado! Mas a tabela 'pacientes' não foi encontrada.");
+                            setDbStatus("success");
+                          } else {
+                            throw error;
+                          }
+                        } else {
+                          setDbStatus("success");
+                          toast.success("Conexão validada!");
+                        }
+
+                        localStorage.setItem('EXTERNAL_SUPABASE_URL', extUrl.trim());
+                        localStorage.setItem('EXTERNAL_SUPABASE_ANON_KEY', extKey.trim());
+                        
+                        setTimeout(() => {
+                          toast.info("Recarregando para aplicar as mudanças...");
+                          window.location.reload();
+                        }, 2000);
+                        
+                      } catch (err: any) {
+                        console.error("Connection test failed:", err);
+                        setDbStatus("error");
+                        setDbError(err.message || "Erro desconhecido ao testar conexão");
+                        toast.error("Falha na conexão");
+                      }
+                    }}
+                  >
+                    {dbStatus === "testing" ? "Testando..." : "Salvar e Conectar"}
                   </Button>
                 </div>
               </div>
