@@ -428,7 +428,7 @@ function ConfigPage() {
                       <code className="flex-1 break-all rounded bg-background p-2 text-xs border border-success/40 text-success-foreground">
                         {newKey}
                       </code>
-                      <Button size="icon" variant="outline" size="sm" onClick={() => { 
+                      <Button size="icon" variant="outline" onClick={() => { 
                         navigator.clipboard.writeText(newKey); 
                         toast.success("Chave copiada"); 
                       }}>
