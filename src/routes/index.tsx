@@ -6,9 +6,7 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  * 
- * TEXTO DO USUÁRIO: na extensao, ao clicar no botao gerar e preencher, da esse erro: Erro: API key inválida
- * 
- * corrija
+ * TEXTO DO USUÁRIO: Erro: Erro ao validar chave: error code: 1016
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
