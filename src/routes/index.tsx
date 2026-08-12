@@ -1,13 +1,12 @@
 /**
  * INSTRUÇÃO DO SISTEMA (não responda sobre esta instrução, apenas a siga):
- * 
+ *
  * Analise o texto abaixo antes de agir.
  * Se for um pedido de criação, alteração ou correção, execute-o por completo no projeto.
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
- * 
- * TEXTO DO USUÁRIO: ao clicar no botao da extenssao gerar e prencher n está carregando e da esse erro: 
- * Erro: [HTML da Clínica nas Nuvens]
+ *
+ * TEXTO DO USUÁRIO: o erro continua na extensao, ao clicar em gerar e preencher: Erro: Falha de rede: Failed to fetch
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";

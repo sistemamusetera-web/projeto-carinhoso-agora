@@ -56,7 +56,13 @@ export const Route = createFileRoute("/api/public/extension/generate")({
           }
 
           const userId = keyRow.user_id;
-          const body = await request.json().catch(() => ({}));
+          let body: any = {};
+          try {
+            const text = await request.text();
+            body = text ? JSON.parse(text) : {};
+          } catch (e) {
+            console.error("[Extension API] JSON Parse Error:", e);
+          }
           const pacienteNome: string = (body.pacienteNome ?? "").toString().trim();
           const pacienteIdExterno: string | null = body.pacienteIdExterno
             ? body.pacienteIdExterno.toString()
