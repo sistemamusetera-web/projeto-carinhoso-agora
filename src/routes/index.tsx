@@ -6,8 +6,7 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  * 
- * TEXTO DO USUÁRIO: Erro de Conexão
- * Could not find the table 'public.pacientes' in the schema cache
+ * TEXTO DO USUÁRIO: apertei remover e usar padrao sem querer e ai voltou, n quero fazer isso, quero continuar com o banco de dados suapabase
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
