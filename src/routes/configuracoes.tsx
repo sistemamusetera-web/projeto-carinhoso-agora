@@ -28,7 +28,8 @@ function ConfigPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [newKey, setNewKey] = useState<string | null>(null);
-  const [promptForm, setPromptForm] = useState<any>(null);
+  const [geminiKey, setGeminiKey] = useState("");
+  const [showGemini, setShowGemini] = useState(false);
 
   const { data: cfg } = useQuery({
     queryKey: ["prompt_config", user?.id],
@@ -60,6 +61,7 @@ function ConfigPage() {
         terapeuta_nome: promptForm.terapeuta_nome ?? "",
         terapeuta_conselho: promptForm.terapeuta_conselho ?? "",
         terapeuta_especialidade: promptForm.terapeuta_especialidade ?? "",
+        gemini_api_key: promptForm.gemini_api_key,
       }).eq("user_id", user!.id);
       if (error) throw error;
     },
@@ -139,6 +141,54 @@ function ConfigPage() {
             </div>
           </Card>
         )}
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-xl font-semibold">Inteligência Artificial (Gemini)</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Insira sua chave da API do Google Gemini para evoluções mais precisas e humanas.
+                Se não configurada, o sistema usará o motor local sem custos.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowGemini(!showGemini)}>
+              {c?.gemini_api_key ? "Alterar chave" : "Configurar"}
+            </Button>
+          </div>
+          
+          {(showGemini || !c?.gemini_api_key) && (
+            <div className="mt-4 space-y-4 border-t pt-4">
+              <div className="space-y-2">
+                <Label>Chave de API do Gemini</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    type="password" 
+                    placeholder="Cole sua chave aqui..." 
+                    value={geminiKey || c?.gemini_api_key || ""} 
+                    onChange={(e) => setGeminiKey(e.target.value)} 
+                  />
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      setPromptForm({ ...c, gemini_api_key: geminiKey });
+                      setTimeout(() => savePrompt.mutate(), 100);
+                      setShowGemini(false);
+                    }}
+                  >
+                    Salvar chave
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Você pode obter uma chave gratuita no <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google AI Studio</a>.
+                </p>
+              </div>
+            </div>
+          )}
+          {c?.gemini_api_key && !showGemini && (
+            <div className="mt-2 text-xs text-success flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> Chave configurada e ativa
+            </div>
+          )}
 
         <Card className="p-6">
           <h2 className="font-display text-xl font-semibold">Extensão Chrome</h2>
