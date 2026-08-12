@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Key, Plus, Trash2, Copy, Download, Save, Smartphone, Sparkles } from "lucide-react";
+import { Key, Plus, Trash2, Copy, Download, Save, Smartphone, Sparkles, Database as DBIcon, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 
@@ -31,6 +32,9 @@ function ConfigPage() {
   const [promptForm, setPromptForm] = useState<any>(null);
   const [geminiKey, setGeminiKey] = useState("");
   const [showGemini, setShowGemini] = useState(false);
+  const [extUrl, setExtUrl] = useState(localStorage.getItem('EXTERNAL_SUPABASE_URL') || "");
+  const [extKey, setExtKey] = useState(localStorage.getItem('EXTERNAL_SUPABASE_ANON_KEY') || "");
+  const [showExternalDB, setShowExternalDB] = useState(false);
 
   const { data: cfg } = useQuery({
     queryKey: ["prompt_config", user?.id],
@@ -116,8 +120,18 @@ function ConfigPage() {
       <main className="container mx-auto px-4 py-10 space-y-8">
         <div>
           <h1 className="font-display text-3xl font-semibold">Configurações</h1>
-          <p className="mt-1 text-muted-foreground">Gerencie a assinatura, as chaves da extensão e o instalador.</p>
+          <p className="mt-1 text-muted-foreground">Gerencie a assinatura, as chaves da extensão e a conexão com o banco de dados.</p>
         </div>
+
+        {localStorage.getItem('EXTERNAL_SUPABASE_URL') && (
+          <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800 dark:text-amber-400">Banco de Dados Externo Ativo</AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-500">
+              Você está conectado a um projeto do Supabase externo. Certifique-se de que as tabelas necessárias foram criadas.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {c && (
           <Card className="p-6">
@@ -243,6 +257,78 @@ function ConfigPage() {
               </div>
             </div>
           </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-blue-500/10 p-2.5">
+                <DBIcon className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-semibold">Banco de Dados Externo</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Use seu próprio projeto do Supabase para evitar instabilidades de rede.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setShowExternalDB(!showExternalDB)}>
+              {localStorage.getItem('EXTERNAL_SUPABASE_URL') ? "Alterar Conexão" : "Configurar"}
+            </Button>
+          </div>
+
+          {showExternalDB && (
+            <div className="mt-4 space-y-4 border-t pt-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Supabase URL</Label>
+                  <Input 
+                    placeholder="https://xxxx.supabase.co" 
+                    value={extUrl} 
+                    onChange={(e) => setExtUrl(e.target.value)} 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Supabase Anon Key</Label>
+                  <Input 
+                    type="password" 
+                    placeholder="eyJhbGciOiJIUzI1Ni..." 
+                    value={extKey} 
+                    onChange={(e) => setExtKey(e.target.value)} 
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <p className="text-xs text-muted-foreground max-w-md">
+                  <strong>Atenção:</strong> Ao salvar, você será deslogado e o sistema recarregará usando o novo banco. 
+                  Os dados do Lovable Cloud não serão migrados.
+                </p>
+                <div className="flex gap-2">
+                  {localStorage.getItem('EXTERNAL_SUPABASE_URL') && (
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => {
+                      localStorage.removeItem('EXTERNAL_SUPABASE_URL');
+                      localStorage.removeItem('EXTERNAL_SUPABASE_ANON_KEY');
+                      window.location.reload();
+                    }}>
+                      Remover e Usar Padrão
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={() => {
+                    if (!extUrl || !extKey) {
+                      toast.error("Preencha URL e Chave");
+                      return;
+                    }
+                    localStorage.setItem('EXTERNAL_SUPABASE_URL', extUrl.trim());
+                    localStorage.setItem('EXTERNAL_SUPABASE_ANON_KEY', extKey.trim());
+                    toast.success("Configuração salva! Recarregando...");
+                    setTimeout(() => window.location.reload(), 1000);
+                  }}>
+                    Salvar e Conectar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
 
 
