@@ -6,7 +6,8 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: o erro continua na extensao, ao clicar em gerar e preencher: Erro: Falha de rede: Failed to fetch
+ * TEXTO DO USUÁRIO: ao clicar no botao gerar e preencher, veja o erro
+ * ![image](user-uploads://Captura_de_Tela_2026-08-12_às_21.04.57.png)
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
