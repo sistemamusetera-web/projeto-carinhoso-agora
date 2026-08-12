@@ -38,21 +38,21 @@ export const Route = createFileRoute("/api/public/extension/generate")({
           const hash = await sha256(apiKey);
           console.log("[Extension Generate] Validating key hash:", hash);
           
-          const { data: keyRow, error: keyError } = await supabaseAdmin
-            .from("api_keys")
-            .select("id, user_id")
-            .eq("key_hash", hash)
-            .maybeSingle();
+          let query = supabaseAdmin.from("api_keys").select("id, user_id").eq("key_hash", hash);
+
+          // Se estivermos em um ambiente de desenvolvimento ou com Supabase externo configurado no process.env
+          // o supabaseAdmin usará as chaves do ambiente.
+          const { data: keyRow, error: keyError } = await query.maybeSingle();
 
           if (keyError) {
             console.error("[Extension Generate] Supabase Error:", keyError);
             return json({ 
-              error: `Erro ao validar chave no Supabase Externo: ${keyError.message} (code: ${keyError.code}). Verifique se a tabela 'api_keys' existe e tem permissão SELECT para service_role.` 
+              error: `Erro de conexão com o banco de dados: ${keyError.message}. Se você usa Supabase Externo, verifique se o projeto não está pausado.` 
             }, 500);
           }
           if (!keyRow) {
             console.warn("[Extension Generate] Key not found for hash:", hash);
-            return json({ error: "API key não encontrada. Certifique-se de gerar uma nova chave após configurar o banco externo." }, 401);
+            return json({ error: "Chave API não encontrada ou inválida. Gere uma nova chave nas Configurações." }, 401);
           }
 
           const userId = keyRow.user_id;
