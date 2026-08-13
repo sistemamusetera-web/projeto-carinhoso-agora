@@ -352,22 +352,36 @@
 
   // ---------- API calls ----------
   async function apiPost(path, body) {
-    const r = await fetch(PANEL + path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-      body: JSON.stringify(body),
-    });
-    const text = await r.text();
-    let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0,200) }; }
-    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-    return data;
+    try {
+      const r = await fetch(PANEL + path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+        body: JSON.stringify(body),
+      });
+      const text = await r.text();
+      let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0,200) }; }
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      return data;
+    } catch (e) {
+      if (e.message.includes("Failed to fetch")) {
+        throw new Error("Erro de Rede: Não foi possível conectar ao servidor. Verifique a URL do painel e sua internet.");
+      }
+      throw e;
+    }
   }
   async function apiGet(path) {
-    const r = await fetch(PANEL + path, { headers: { "x-api-key": API_KEY } });
-    const text = await r.text();
-    let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0,200) }; }
-    if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-    return data;
+    try {
+      const r = await fetch(PANEL + path, { headers: { "x-api-key": API_KEY } });
+      const text = await r.text();
+      let data = {}; try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0,200) }; }
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      return data;
+    } catch (e) {
+      if (e.message.includes("Failed to fetch")) {
+        throw new Error("Erro de Rede: Servidor inacessível.");
+      }
+      throw e;
+    }
   }
 
   // ---------- preencher campos da assinatura ----------

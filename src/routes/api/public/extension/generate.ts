@@ -29,7 +29,15 @@ export const Route = createFileRoute("/api/public/extension/generate")({
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       POST: async ({ request }) => {
         try {
-          const supabaseAdmin = await getSupabaseAdmin();
+          let supabaseAdmin;
+          try {
+            supabaseAdmin = await getSupabaseAdmin();
+          } catch (envErr: any) {
+            console.error("[Extension Generate] Env Error:", envErr);
+            return json({ 
+              error: "O sistema não está configurado para receber conexões da extensão. Verifique as 'Environment Variables' no painel do Lovable (VITE_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY)." 
+            }, 503);
+          }
 
           const apiKey =
             request.headers.get("x-api-key") ??
@@ -48,7 +56,7 @@ export const Route = createFileRoute("/api/public/extension/generate")({
           } catch (dbErr: any) {
             console.error("[Extension Generate] DB Critical Error:", dbErr);
             return json({ 
-              error: `Erro crítico de banco: ${dbErr.message || "Banco pausado"}. Por favor, verifique o status do Lovable Cloud.` 
+              error: `Erro de conexão com o seu Supabase: ${dbErr.message || "Serviço indisponível"}. Verifique se o seu projeto Supabase externo está ativo.` 
             }, 503);
           }
 

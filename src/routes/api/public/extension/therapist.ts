@@ -27,7 +27,13 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       GET: async ({ request }) => {
         try {
-          const supabaseAdmin = await getSupabaseAdmin();
+          let supabaseAdmin;
+          try {
+            supabaseAdmin = await getSupabaseAdmin();
+          } catch (envErr: any) {
+             console.error("[Therapist API] Env Error:", envErr);
+             return json({ error: "Configuração de servidor ausente (VITE_SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY no painel Lovable)." }, 503);
+          }
           
           const apiKey =
             request.headers.get("x-api-key") ??
@@ -48,7 +54,7 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
             keyRow = result.data;
           } catch (e: any) {
             console.error("[Therapist API] DB Error:", e);
-            return json({ error: `Erro de conexão com o banco. Tente novamente.` }, 503);
+            return json({ error: `Erro de conexão com o banco externo. Verifique se o Supabase está ativo.` }, 503);
           }
 
           if (!keyRow) return json({ error: "API key inválida" }, 401);

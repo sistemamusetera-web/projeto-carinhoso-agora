@@ -28,7 +28,15 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       POST: async ({ request }) => {
         try {
-          const supabaseAdmin = await getSupabaseAdmin();
+          let supabaseAdmin;
+          try {
+            supabaseAdmin = await getSupabaseAdmin();
+          } catch (envErr: any) {
+            console.error("[Extension Chat Generate] Env Error:", envErr);
+            return json({ 
+              error: "Configuração de servidor ausente. Defina VITE_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no painel Lovable." 
+            }, 503);
+          }
 
           const apiKey =
             request.headers.get("x-api-key") ??
@@ -49,7 +57,8 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
             keyRow = result.data;
             keyError = result.error;
           } catch (dbErr: any) {
-            return json({ error: `Banco inacessível: ${dbErr.message || "Pausado"}` }, 503);
+            console.error("[Extension Chat Generate] DB Error:", dbErr);
+            return json({ error: `Conexão com banco externo falhou: ${dbErr.message || "Pausado"}. Verifique o status do seu Supabase.` }, 503);
           }
 
           if (keyError) {
