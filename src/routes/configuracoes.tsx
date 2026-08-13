@@ -189,7 +189,10 @@ function ConfigPage() {
                     size="sm" 
                     onClick={() => {
                       setPromptForm({ ...c, gemini_api_key: geminiKey });
-                      setTimeout(() => savePrompt.mutate(), 100);
+                      setTimeout(() => {
+                        savePrompt.mutate();
+                        setGeminiKey("");
+                      }, 100);
                       setShowGemini(false);
                     }}
                   >
