@@ -6,7 +6,7 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: baixei uma nova extensao e mesmo assim n está carregando os dados da assinatura do terapeuta
+ * TEXTO DO USUÁRIO: ainda a extenssai n está conseguindo carregar os dados da assinatura do terapeuta
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
