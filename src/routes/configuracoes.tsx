@@ -126,11 +126,11 @@ function ConfigPage() {
         </div>
 
         {localStorage.getItem('EXTERNAL_SUPABASE_URL') && (
-          <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-800 dark:text-amber-400">Banco de Dados Externo Ativo</AlertTitle>
-            <AlertDescription className="text-amber-700 dark:text-amber-500">
-              Você está conectado a um projeto do Supabase externo. Certifique-se de que as tabelas necessárias foram criadas.
+          <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950/20">
+            <DBIcon className="h-4 w-4 text-blue-600" />
+            <AlertTitle className="text-blue-800 dark:text-blue-400">Banco de Dados Externo Ativo</AlertTitle>
+            <AlertDescription className="text-blue-700 dark:text-blue-500">
+              Você está utilizando o Supabase Externo para armazenar seus dados.
             </AlertDescription>
           </Alert>
         )}
@@ -268,9 +268,9 @@ function ConfigPage() {
                 <DBIcon className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <h2 className="font-display text-xl font-semibold">Banco de Dados Externo</h2>
+                <h2 className="font-display text-xl font-semibold">Banco de Dados (Supabase Externo)</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Use seu próprio projeto do Supabase para evitar instabilidades de rede.
+                  Seu sistema está configurado para usar o Supabase Externo como banco de dados principal.
                 </p>
               </div>
             </div>
@@ -322,8 +322,8 @@ function ConfigPage() {
               </div>
               <div className="flex justify-between items-center">
                 <p className="text-xs text-muted-foreground max-w-md">
-                  <strong>Atenção:</strong> Ao salvar, você será deslogado e o sistema recarregará usando o novo banco. 
-                  Os dados do Lovable Cloud não serão migrados.
+                  <strong>Nota:</strong> O sistema prioriza as credenciais salvas aqui. 
+                  Isso garante que sua aplicação seja 100% independente do banco interno.
                 </p>
                 <div className="flex gap-2">
                   {localStorage.getItem('EXTERNAL_SUPABASE_URL') && (
