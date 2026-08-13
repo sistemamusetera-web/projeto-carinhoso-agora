@@ -6,7 +6,9 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: eu nao quero mais usar o lovable cloud, esse meu projeto agora será 100% supabase, banco externo
+ * TEXTO DO USUÁRIO: Erro: Falha de rede: Failed to fetch
+ *
+ * analise o painel, as conexoes, e a extensao e faca uma verificao completa porqu está dando esse erro.
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";

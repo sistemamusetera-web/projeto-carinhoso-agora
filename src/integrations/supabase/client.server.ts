@@ -1,15 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+/**
+ * IMPORTANTE: Como o usuário está usando 100% Supabase Externo, 
+ * o servidor precisa usar as credenciais desse banco externo para validar chaves de API.
+ * Se as variáveis VITE_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY não forem as do banco externo,
+ * a extensão falhará ao tentar validar a chave.
+ */
 function createSupabaseAdminClient() {
-  // 1. Tenta carregar as credenciais externas (fornecidas via request headers ou env)
   let url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   let key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // IMPORTANTE: Como o usuário quer 100% Supabase externo, as funções de servidor
-  // precisam usar as mesmas credenciais do Supabase externo que ele configurou.
-  // Se o Lovable Cloud estiver pausado, o process.env pode estar vazio.
-  
   if (!url || !key) {
     console.warn(`[Supabase Admin] Variáveis críticas ausentes. URL: ${!!url}, Key: ${!!key}`);
     return null;
@@ -26,21 +27,17 @@ function createSupabaseAdminClient() {
 
 let _supabaseAdmin: any | undefined;
 
-/**
- * Cliente Supabase com privilégios de admin (service_role).
- * Resiliente a reinicializações de ambiente e falhas de variáveis.
- */
 export const supabaseAdmin = new Proxy({} as any, {
   get(_, prop, receiver) {
-    // Tenta (re)inicializar se estiver nulo ou se as variáveis podem ter mudado
     if (!_supabaseAdmin) {
       _supabaseAdmin = createSupabaseAdminClient();
     }
     
     if (!_supabaseAdmin) {
-      // Retorna um objeto que lança erro explicativo ao ser chamado
       return (...args: any[]) => {
-        throw new Error("O banco de dados (Lovable Cloud) está inacessível. Certifique-se de que ele não está PAUSADO no painel do Lovable.");
+        const errorMsg = "FALHA NO SERVIDOR: O banco de dados externo não está configurado corretamente no ambiente (Service Role Key ausente).";
+        console.error(errorMsg);
+        throw new Error(errorMsg);
       };
     }
     return Reflect.get(_supabaseAdmin, prop, receiver);
