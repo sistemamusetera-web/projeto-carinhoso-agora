@@ -1,8 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { Database } from "../integrations/supabase/types";
-
-// Note: In server functions, process.env is only available inside the handler.
-// But we need a factory or a way to get the admin client.
+import { Database } from "./types";
 
 export const createAdminClient = (url: string, key: string) => {
   return createClient<Database>(url, key, {
@@ -23,7 +20,6 @@ export const getSupabaseAdmin = async () => {
     );
   }
 
-  // Remove trailing slash if present
   const cleanUrl = url.replace(/\/$/, "");
   return createAdminClient(cleanUrl, key);
 };

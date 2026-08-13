@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getSupabaseAdmin } from "@/integrations/supabase/client.server";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +27,8 @@ export const Route = createFileRoute("/api/public/extension/confirm")({
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       POST: async ({ request }) => {
         try {
+          const supabaseAdmin = await getSupabaseAdmin();
+
           const apiKey =
             request.headers.get("x-api-key") ??
             request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
