@@ -126,14 +126,15 @@ function ConfigPage() {
         </div>
 
         {localStorage.getItem('EXTERNAL_SUPABASE_URL') && (
-          <Alert className="border-blue-500 bg-blue-50 dark:bg-blue-950/20">
-            <DBIcon className="h-4 w-4 text-blue-600" />
-            <AlertTitle className="text-blue-800 dark:text-blue-400">Banco de Dados Externo Ativo</AlertTitle>
-            <AlertDescription className="text-blue-700 dark:text-blue-500">
-              Você está utilizando o Supabase Externo para armazenar seus dados.
+          <Alert className="border-green-500 bg-green-50 dark:bg-green-950/20">
+            <DBIcon className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-800 dark:text-green-400">Banco de Dados Externo Ativo (100% Supabase)</AlertTitle>
+            <AlertDescription className="text-green-700 dark:text-green-500">
+              O sistema está operando exclusivamente com o seu banco de dados externo. O banco interno foi removido.
             </AlertDescription>
           </Alert>
         )}
+
 
         {c && (
           <Card className="p-6">
