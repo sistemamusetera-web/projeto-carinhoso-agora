@@ -5,8 +5,8 @@ import { gerarEvolucaoGemini } from "@/lib/gemini/service";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS, PUT, DELETE",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Api-Key, x-api-key",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS, HEAD",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Api-Key, x-api-key, x-external-url, x-external-key",
   "Access-Control-Max-Age": "86400",
 };
 
