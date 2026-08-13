@@ -6,7 +6,7 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: no painel ja está salvo os dados da Assinatura do terapeuta responsável pela evolução, MAS NAO está preenchendo A extensão NAO detecta o formulário automaticamente. corrija
+ * TEXTO DO USUÁRIO: baixei uma nova extensao e mesmo assim n está carregando os dados da assinatura do terapeuta
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
