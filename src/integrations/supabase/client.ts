@@ -13,22 +13,23 @@ function createSupabaseClient() {
   }
 
   // Use external if provided, otherwise use environment variables
-  const SUPABASE_URL = externalUrl || import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = externalKey || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const SUPABASE_URL = externalUrl || import.meta.env.VITE_SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = externalKey || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
       ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
       ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud or provide an external URL in Settings.`;
+    const message = `Missing Supabase configuration: ${missing.join(', ')}. Please provide an external URL and Key in Settings.`;
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
 
   if (externalUrl && typeof window !== 'undefined') {
-    console.log(`[Supabase] Using external database: ${externalUrl}`);
+    console.log(`[Supabase] Using external database (100% mode): ${externalUrl}`);
   }
+
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {

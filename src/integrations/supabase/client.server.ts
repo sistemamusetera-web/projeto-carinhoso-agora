@@ -2,21 +2,20 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 /**
- * IMPORTANTE: Como o usuário está usando 100% Supabase Externo, 
- * o servidor precisa usar as credenciais desse banco externo para validar chaves de API.
- * Se as variáveis VITE_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY não forem as do banco externo,
- * a extensão falhará ao tentar validar a chave.
+ * IMPORTANTE: O usuário agora usa 100% Supabase Externo.
+ * Para que o backend (extensão e IA) funcione sem o banco interno,
+ * precisamos de uma Service Role Key do banco externo.
  */
-function createSupabaseAdminClient() {
-  let url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  let key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function createSupabaseAdminClient(url?: string, key?: string) {
+  const finalUrl = url || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const finalKey = key || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!url || !key) {
-    console.warn(`[Supabase Admin] Variáveis críticas ausentes. URL: ${!!url}, Key: ${!!key}`);
+  if (!finalUrl || !finalKey) {
+    console.warn(`[Supabase Admin] Variáveis ausentes. URL: ${!!finalUrl}, Key: ${!!finalKey}.`);
     return null;
   }
 
-  return createClient<Database>(url, key, {
+  return createClient<Database>(finalUrl, finalKey, {
     auth: {
       storage: undefined,
       persistSession: false,
@@ -27,19 +26,29 @@ function createSupabaseAdminClient() {
 
 let _supabaseAdmin: any | undefined;
 
+export const getSupabaseAdmin = (externalUrl?: string, externalKey?: string) => {
+  if (externalUrl && externalKey) {
+    return createSupabaseAdminClient(externalUrl, externalKey);
+  }
+  
+  if (!_supabaseAdmin) _supabaseAdmin = createSupabaseAdminClient();
+  
+  if (!_supabaseAdmin) {
+    return new Proxy({} as any, {
+      get() {
+        return () => {
+          throw new Error("BANCO EXTERNO NÃO CONFIGURADO: Para usar 100% banco externo, você precisa adicionar SUPABASE_SERVICE_ROLE_KEY em 'Settings' no Lovable.");
+        };
+      }
+    });
+  }
+  return _supabaseAdmin;
+};
+
 export const supabaseAdmin = new Proxy({} as any, {
   get(_, prop, receiver) {
-    if (!_supabaseAdmin) {
-      _supabaseAdmin = createSupabaseAdminClient();
-    }
-    
-    if (!_supabaseAdmin) {
-      return (...args: any[]) => {
-        const errorMsg = "FALHA NO SERVIDOR: O banco de dados externo não está configurado corretamente no ambiente (Service Role Key ausente).";
-        console.error(errorMsg);
-        throw new Error(errorMsg);
-      };
-    }
-    return Reflect.get(_supabaseAdmin, prop, receiver);
+    const client = getSupabaseAdmin();
+    return Reflect.get(client, prop, receiver);
   },
 });
+
