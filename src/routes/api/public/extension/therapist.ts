@@ -48,8 +48,7 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
             keyRow = result.data;
           } catch (e: any) {
             console.error("[Therapist API] DB Error:", e);
-            // Fallback para tentar reconectar se for erro de pool ou timeout
-            return json({ error: `Banco de dados pausado ou erro de conexão. Tente novamente em alguns segundos.` }, 503);
+            return json({ error: `Erro de conexão com o banco. Tente novamente.` }, 503);
           }
 
           if (!keyRow) return json({ error: "API key inválida" }, 401);
@@ -68,12 +67,11 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
 
           console.log("[Therapist API] Config found:", cfg ? "Yes" : "No", cfg);
 
-
           return json({
             terapeuta: {
-              nome: cfg?.terapeuta_nome ?? "",
-              conselho: cfg?.terapeuta_conselho ?? "",
-              especialidade: cfg?.terapeuta_especialidade ?? "",
+              nome: cfg?.terapeuta_nome || "",
+              conselho: cfg?.terapeuta_conselho || "",
+              especialidade: cfg?.terapeuta_especialidade || "",
             },
           });
         } catch (e) {
