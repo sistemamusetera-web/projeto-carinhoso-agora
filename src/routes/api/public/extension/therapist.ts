@@ -34,11 +34,18 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
           if (!apiKey) return json({ error: "API key ausente" }, 401);
 
           const hash = await sha256(apiKey);
-          const { data: keyRow } = await supabaseAdmin
-            .from("api_keys")
-            .select("id, user_id")
-            .eq("key_hash", hash)
-            .maybeSingle();
+          let keyRow;
+          try {
+            const result = await supabaseAdmin
+              .from("api_keys")
+              .select("id, user_id")
+              .eq("key_hash", hash)
+              .maybeSingle();
+            keyRow = result.data;
+          } catch (e) {
+            return json({ error: "Banco de dados pausado" }, 503);
+          }
+
           if (!keyRow) return json({ error: "API key inválida" }, 401);
 
           const { data: cfg } = await supabaseAdmin
