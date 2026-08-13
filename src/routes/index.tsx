@@ -6,7 +6,7 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: a extensao n está carregando a Assinatura do profssional.
+ * TEXTO DO USUÁRIO: na extensao ao clicar no botao prencher e gerar da esse Erro: Falha de rede: Failed to fetch
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
