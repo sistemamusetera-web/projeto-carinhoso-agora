@@ -13,11 +13,10 @@
 
   const CFG = window.__EVO_CFG || {};
   if (!CFG.panelUrl || !CFG.apiKey) {
-    alert("Bookmarklet sem configuração. Refaça em /mobile-bookmarklet.");
-    return;
+    console.warn("Mobile Agent: Configuração incompleta", CFG);
   }
-  const PANEL = CFG.panelUrl.replace(/\/$/, "");
-  const API_KEY = CFG.apiKey;
+  const PANEL = (CFG.panelUrl || "").replace(/\/$/, "");
+  const API_KEY = CFG.apiKey || "";
 
   // ---------- CSS ----------
   const css = `
@@ -153,7 +152,7 @@
     ]},
   ];
 
-  const SIG_RX = /(assinatura|assinar|signature|rodap[ée]|conselho|\bcrp\b|\bcrm\b|\bcro\b|\bcpf\b|registro|especialidade|terapeuta|profissional|respons[áa]vel|psic[óo]log[oa]|^nome$|nome\s*completo|data)/i;
+  const SIG_RX = /(assinatura|assinar|signature|rodap[ée]|conselho|\bcrp\b|\bcrm\b|\bcro\b|\bcpf\b|registro|n[uú]mero do conselho|especialidade|[áa]rea de atua|forma[çc][aã]o|terapeuta|profissional|respons[áa]vel|psic[óo]log[oa]|atendente|^nome$|nome\s*completo|(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|assinatura.*data|data.*sess|data.*atend))/i;
   const isSig = (n) => SIG_RX.test(n || "");
 
   // ---------- helpers ----------
@@ -266,10 +265,10 @@
         if (c && !isJunkLabel(c)) return c;
       }
     }
-    const card = findFieldCardLabel(el);
-    if (card) return card;
     const aria = el.getAttribute("aria-label");
     if (aria) { const c = clean(aria); if (c && !isJunkLabel(c)) return c; }
+    const card = findFieldCardLabel(el);
+    if (card) return card;
     let cur = el.parentElement;
     for (let d=0; d<8 && cur; d++) {
       let sib = el.previousElementSibling || cur.previousElementSibling;
@@ -334,8 +333,7 @@
         if (isSearchInput(el)) continue;
       }
       const r = el.getBoundingClientRect();
-      if (r.width < 80 || r.height < 18) continue;
-      if (el.closest("header,nav,aside,[role='banner'],[role='navigation'],[role='search']")) continue;
+      if (r.width < 4 || r.height < 4) continue;
       let label = findLabel(el);
       if (!label) continue;
       if (isJunkLabel(label)) continue;
