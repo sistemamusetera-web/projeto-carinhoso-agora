@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { getSupabaseAdmin } from "@/integrations/supabase/client.server";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +27,8 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
       GET: async ({ request }) => {
         try {
+          const supabaseAdmin = await getSupabaseAdmin();
+          
           const apiKey =
             request.headers.get("x-api-key") ??
             request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
@@ -60,6 +62,9 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
             console.error("[Therapist API] Config Fetch Error:", cfgError);
             return json({ error: `Erro ao buscar configuração: ${cfgError.message}` }, 500);
           }
+
+          console.log("[Therapist API] Config found:", cfg ? "Yes" : "No", cfg);
+
 
           return json({
             terapeuta: {
