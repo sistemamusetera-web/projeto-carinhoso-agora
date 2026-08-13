@@ -6,9 +6,7 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: Erro: Falha de rede: Failed to fetch
- *
- * analise o painel, as conexoes, e a extensao e faca uma verificao completa porqu está dando esse erro.
+ * TEXTO DO USUÁRIO: n estou achando a opcao de  Environment Variables no supabase
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
