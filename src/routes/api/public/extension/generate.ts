@@ -38,21 +38,26 @@ export const Route = createFileRoute("/api/public/extension/generate")({
           const hash = await sha256(apiKey);
           console.log("[Extension Generate] Validating key hash:", hash);
           
-          let query = supabaseAdmin.from("api_keys").select("id, user_id").eq("key_hash", hash);
-
-          // Se estivermos em um ambiente de desenvolvimento ou com Supabase externo configurado no process.env
-          // o supabaseAdmin usará as chaves do ambiente.
-          const { data: keyRow, error: keyError } = await query.maybeSingle();
+          let keyRow, keyError;
+          try {
+            const result = await supabaseAdmin.from("api_keys").select("id, user_id").eq("key_hash", hash).maybeSingle();
+            keyRow = result.data;
+            keyError = result.error;
+          } catch (dbErr: any) {
+            console.error("[Extension Generate] DB Critical Error:", dbErr);
+            return json({ 
+              error: `Erro crítico de banco: ${dbErr.message || "Banco pausado"}. Por favor, verifique o status do Lovable Cloud.` 
+            }, 503);
+          }
 
           if (keyError) {
             console.error("[Extension Generate] Supabase Error:", keyError);
             return json({ 
-              error: `Erro de conexão com o banco de dados: ${keyError.message}. Se você usa Supabase Externo, verifique se o projeto não está pausado.` 
+              error: `Erro de conexão: ${keyError.message}. Se você usa Supabase Externo, verifique se ele está ativo.` 
             }, 500);
           }
           if (!keyRow) {
-            console.warn("[Extension Generate] Key not found for hash:", hash);
-            return json({ error: "Chave API não encontrada ou inválida. Gere uma nova chave nas Configurações." }, 401);
+            return json({ error: "Chave API inválida ou expirada. Gere uma nova nas Configurações." }, 401);
           }
 
           const userId = keyRow.user_id;

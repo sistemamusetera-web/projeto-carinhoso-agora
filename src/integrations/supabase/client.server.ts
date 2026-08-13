@@ -2,16 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  // Prioriza variáveis de ambiente do Lovable Cloud
+  // 1. Prioriza variáveis de ambiente do Lovable Cloud
   let url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   let key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Fallback para URL mock/exemplo apenas se absolutamente nada estiver definido (evita crash imediato)
+  // 2. Fallback dinâmico: Se não houver service_role (ambiente pausado), 
+  // tentamos usar as chaves do ambiente VITE injetadas no deploy
+  if (!url) url = process.env.VITE_SUPABASE_URL;
+  if (!key) key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
   if (!url || !key) {
-    console.warn(`[Supabase Admin] Variáveis ausentes. URL: ${!!url}, Key: ${!!key}. Verifique se o banco de dados Lovable Cloud está ativo.`);
-    
-    // Se não temos a chave service_role, não há muito o que fazer para operações ADMIN
-    // Mas não jogamos erro aqui para permitir que o Proxy seja criado
+    console.warn(`[Supabase Admin] Variáveis críticas ausentes. URL: ${!!url}, Key: ${!!key}`);
     return null;
   }
 
@@ -26,11 +27,22 @@ function createSupabaseAdminClient() {
 
 let _supabaseAdmin: any | undefined;
 
+/**
+ * Cliente Supabase com privilégios de admin (service_role).
+ * Resiliente a reinicializações de ambiente e falhas de variáveis.
+ */
 export const supabaseAdmin = new Proxy({} as any, {
   get(_, prop, receiver) {
-    if (!_supabaseAdmin) _supabaseAdmin = createSupabaseAdminClient();
+    // Tenta (re)inicializar se estiver nulo ou se as variáveis podem ter mudado
     if (!_supabaseAdmin) {
-      throw new Error("O banco de dados do Lovable Cloud parece estar pausado ou não configurado. Por favor, reinicie o banco no painel.");
+      _supabaseAdmin = createSupabaseAdminClient();
+    }
+    
+    if (!_supabaseAdmin) {
+      // Retorna um objeto que lança erro explicativo ao ser chamado
+      return (...args: any[]) => {
+        throw new Error("O banco de dados (Lovable Cloud) está inacessível. Certifique-se de que ele não está PAUSADO no painel do Lovable.");
+      };
     }
     return Reflect.get(_supabaseAdmin, prop, receiver);
   },

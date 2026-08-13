@@ -37,21 +37,27 @@ export const Route = createFileRoute("/api/public/extension/chat-generate")({
           const hash = await sha256(apiKey);
           console.log("[Extension Chat Generate] Validating key hash:", hash);
 
-          const { data: keyRow, error: keyError } = await supabaseAdmin
-            .from("api_keys")
-            .select("id, user_id")
-            .eq("key_hash", hash)
-            .maybeSingle();
+          let keyRow, keyError;
+          try {
+            const result = await supabaseAdmin
+              .from("api_keys")
+              .select("id, user_id")
+              .eq("key_hash", hash)
+              .maybeSingle();
+            keyRow = result.data;
+            keyError = result.error;
+          } catch (dbErr: any) {
+            return json({ error: `Banco inacessível: ${dbErr.message || "Pausado"}` }, 503);
+          }
 
           if (keyError) {
             console.error("[Extension Chat Generate] Supabase Error:", keyError);
             return json({ 
-              error: `Erro de conexão com o banco de dados: ${keyError.message}. Se você usa Supabase Externo, verifique se o projeto não está pausado.` 
+              error: `Erro de conexão: ${keyError.message}` 
             }, 500);
           }
           if (!keyRow) {
-            console.warn("[Extension Chat Generate] Key not found for hash:", hash);
-            return json({ error: "Chave API não encontrada ou inválida. Gere uma nova chave nas Configurações." }, 401);
+            return json({ error: "Chave API inválida ou não encontrada." }, 401);
           }
 
           const userId = keyRow.user_id;
