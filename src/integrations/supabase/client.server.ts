@@ -15,8 +15,9 @@ export const getSupabaseAdmin = async () => {
   const key = process.env["SUPABASE_SERVICE_ROLE_KEY"];
 
   if (!url || !key) {
+    console.error("[Supabase Admin] Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment variables.");
     throw new Error(
-      "Configuração de banco de dados (VITE_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY) ausente no ambiente do servidor (Lovable Settings)."
+      "Configuração de banco de dados (VITE_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY) ausente no ambiente do servidor. Por favor, configure as 'Environment Variables' no painel do Lovable (Settings)."
     );
   }
 

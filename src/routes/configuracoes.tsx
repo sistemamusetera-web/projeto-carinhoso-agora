@@ -120,9 +120,25 @@ function ConfigPage() {
     <div className="min-h-screen">
       <Header />
       <main className="container mx-auto px-4 py-10 space-y-8">
-        <div>
-          <h1 className="font-display text-3xl font-semibold">Configurações</h1>
-          <p className="mt-1 text-muted-foreground">Gerencie a assinatura, as chaves da extensão e a conexão com o banco de dados.</p>
+        <div className="space-y-4">
+          <div>
+            <h1 className="font-display text-3xl font-semibold">Configurações</h1>
+            <p className="mt-1 text-muted-foreground">Gerencie a assinatura, as chaves da extensão e a conexão com o banco de dados.</p>
+          </div>
+
+          {!process.env.VITE_SUPABASE_URL && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Configuração de Servidor Pendente</AlertTitle>
+              <AlertDescription>
+                Para a extensão funcionar, você <strong>precisa</strong> configurar as variáveis de ambiente no painel do Lovable (Settings &gt; Environment Variables):
+                <ul className="mt-2 list-disc list-inside space-y-1">
+                  <li><code>VITE_SUPABASE_URL</code> (URL do seu Supabase)</li>
+                  <li><code>SUPABASE_SERVICE_ROLE_KEY</code> (Service Role Key do seu Supabase)</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         {localStorage.getItem('EXTERNAL_SUPABASE_URL') && (
