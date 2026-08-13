@@ -13,8 +13,8 @@ function createSupabaseClient() {
   }
 
   // Use external if provided, otherwise use environment variables
-  const SUPABASE_URL = externalUrl || import.meta.env.VITE_SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = externalKey || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const SUPABASE_URL = externalUrl || import.meta.env.VITE_SUPABASE_URL || '';
+  const SUPABASE_PUBLISHABLE_KEY = externalKey || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [

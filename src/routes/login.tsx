@@ -49,10 +49,10 @@ function LoginPage() {
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+      if (err.message === "Failed to fetch" || err.name === "TypeError" || err.status === 0) {
         setFetchError(true);
       }
-      toast.error(err.message ?? "Erro ao autenticar");
+      toast.error(err.message || "Falha de comunicação com o servidor. Verifique sua conexão ou se o banco está ativo.");
     } finally {
       setLoading(false);
     }
