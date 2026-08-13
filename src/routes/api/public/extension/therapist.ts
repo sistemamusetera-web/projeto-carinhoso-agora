@@ -36,6 +36,8 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
           if (!apiKey) return json({ error: "API key ausente" }, 401);
 
           const hash = await sha256(apiKey);
+          console.log("[Therapist API] Validating key hash:", hash);
+          
           let keyRow;
           try {
             const result = await supabaseAdmin
@@ -46,7 +48,7 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
             keyRow = result.data;
           } catch (e: any) {
             console.error("[Therapist API] DB Error:", e);
-            return json({ error: `Banco de dados pausado ou erro de conexão: ${e.message}` }, 503);
+            return json({ error: `Erro de conexão com o banco. Tente novamente.` }, 503);
           }
 
           if (!keyRow) return json({ error: "API key inválida" }, 401);
@@ -65,12 +67,11 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
 
           console.log("[Therapist API] Config found:", cfg ? "Yes" : "No", cfg);
 
-
           return json({
             terapeuta: {
-              nome: cfg?.terapeuta_nome ?? "",
-              conselho: cfg?.terapeuta_conselho ?? "",
-              especialidade: cfg?.terapeuta_especialidade ?? "",
+              nome: cfg?.terapeuta_nome || "",
+              conselho: cfg?.terapeuta_conselho || "",
+              especialidade: cfg?.terapeuta_especialidade || "",
             },
           });
         } catch (e) {

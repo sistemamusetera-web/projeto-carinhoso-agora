@@ -6,7 +6,7 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: a extensao NAO está carregando os dados da assinatura
+ * TEXTO DO USUÁRIO: ainda a extensao NAO está preenchendo automaticamente os dados da Assinatura do terapeuta responsável pela evolução. precisa baixar uma extensao atualizada?
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
