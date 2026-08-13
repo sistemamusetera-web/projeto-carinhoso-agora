@@ -42,17 +42,24 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
               .eq("key_hash", hash)
               .maybeSingle();
             keyRow = result.data;
-          } catch (e) {
-            return json({ error: "Banco de dados pausado" }, 503);
+          } catch (e: any) {
+            console.error("[Therapist API] DB Error:", e);
+            return json({ error: `Banco de dados pausado ou erro de conexão: ${e.message}` }, 503);
           }
 
           if (!keyRow) return json({ error: "API key inválida" }, 401);
 
-          const { data: cfg } = await supabaseAdmin
+          console.log("[Therapist API] Fetching config for user:", keyRow.user_id);
+          const { data: cfg, error: cfgError } = await supabaseAdmin
             .from("prompt_config")
             .select("terapeuta_nome, terapeuta_conselho, terapeuta_especialidade")
             .eq("user_id", keyRow.user_id)
             .maybeSingle();
+
+          if (cfgError) {
+            console.error("[Therapist API] Config Fetch Error:", cfgError);
+            return json({ error: `Erro ao buscar configuração: ${cfgError.message}` }, 500);
+          }
 
           return json({
             terapeuta: {
