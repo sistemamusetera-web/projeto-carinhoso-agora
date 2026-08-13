@@ -36,6 +36,8 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
           if (!apiKey) return json({ error: "API key ausente" }, 401);
 
           const hash = await sha256(apiKey);
+          console.log("[Therapist API] Validating key hash:", hash);
+          
           let keyRow;
           try {
             const result = await supabaseAdmin
@@ -46,7 +48,8 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
             keyRow = result.data;
           } catch (e: any) {
             console.error("[Therapist API] DB Error:", e);
-            return json({ error: `Banco de dados pausado ou erro de conexão: ${e.message}` }, 503);
+            // Fallback para tentar reconectar se for erro de pool ou timeout
+            return json({ error: `Banco de dados pausado ou erro de conexão. Tente novamente em alguns segundos.` }, 503);
           }
 
           if (!keyRow) return json({ error: "API key inválida" }, 401);
