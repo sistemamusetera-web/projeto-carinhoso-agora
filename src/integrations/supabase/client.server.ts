@@ -2,15 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 function createSupabaseAdminClient() {
-  // 1. Prioriza variáveis de ambiente do Lovable Cloud
+  // 1. Tenta carregar as credenciais externas (fornecidas via request headers ou env)
   let url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
   let key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // 2. Fallback dinâmico: Se não houver service_role (ambiente pausado), 
-  // tentamos usar as chaves do ambiente VITE injetadas no deploy
-  if (!url) url = process.env.VITE_SUPABASE_URL;
-  if (!key) key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
+  // IMPORTANTE: Como o usuário quer 100% Supabase externo, as funções de servidor
+  // precisam usar as mesmas credenciais do Supabase externo que ele configurou.
+  // Se o Lovable Cloud estiver pausado, o process.env pode estar vazio.
+  
   if (!url || !key) {
     console.warn(`[Supabase Admin] Variáveis críticas ausentes. URL: ${!!url}, Key: ${!!key}`);
     return null;
