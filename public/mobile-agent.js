@@ -152,7 +152,7 @@
     ]},
   ];
 
-  const SIG_RX = /(assinatura|assinar|signature|rodap[ée]|conselho|\bcrp\b|\bcrm\b|\bcro\b|\bcpf\b|registro|n[uú]mero do conselho|especialidade|[áa]rea de atua|forma[çc][aã]o|terapeuta|profissional|respons[áa]vel|psic[óo]log[oa]|atendente|^nome$|nome\s*completo|(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|assinatura.*data|data.*sess|data.*atend))/i;
+  const SIG_RX = /(assinatura|assinar|signature|rodap[ée]|conselho|\bcrp\b|\bcrm\b|\bcro\b|\bcpf\b|registro|n[uú]mero do conselho|crp|crm|cro|registro|especialidade|[áa]rea de atua|forma[çc][aã]o|terapeuta|profissional|respons[áa]vel|psic[óo]log[oa]|atendente|^nome$|nome\s*completo|c\.r\.p|c\.r\.m|c\.r\.o|cart[aã]o|matr[ií]cula|visto|carimbo|(^|\b)(data|dt[_ ]?sess|sess[aã]o.*data|assinatura.*data|data.*sess|data.*atend))/i;
   const isSig = (n) => SIG_RX.test(n || "");
 
   // ---------- helpers ----------
@@ -188,7 +188,7 @@
   }
   function extractIdFromUrl() { const m=location.pathname.match(/\/(\d{5,})/); return m?m[1]:null; }
 
-  function isVisible(el){ if(!el||el.offsetParent===null) return false; const r=el.getBoundingClientRect(); return r.width>0&&r.height>0; }
+  function isVisible(el){ if(!el||el.offsetParent===null) return false; const r=el.getBoundingClientRect(); return r.width>0 || r.height>0; }
   function isChrome(el){ return !!el.closest(".evo-chat"); }
 
   async function preScroll() {
