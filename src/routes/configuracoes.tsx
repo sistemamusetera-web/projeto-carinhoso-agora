@@ -229,14 +229,23 @@ function ConfigPage() {
         </Card>
 
         <Card className="p-6">
-          <h2 className="font-display text-xl font-semibold">Extensão Chrome</h2>
+          <h2 className="font-display text-xl font-semibold">Extensão Chrome (Desktop)</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Instale a extensão para gerar evoluções automaticamente dentro do Clínica nas Nuvens.
+            Agora com <strong>Configuração Automática</strong>: basta clicar no ícone da extensão e no botão de conectar!
           </p>
-          <Button onClick={downloadExtensao} className="mt-4 gap-2"><Download className="h-4 w-4" /> Baixar extensão (.zip)</Button>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Após baixar: descompacte → abra <code>chrome://extensions</code> → ative o "Modo desenvolvedor" → "Carregar sem compactação" → selecione a pasta.
-          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button onClick={downloadExtensao} className="gap-2"><Download className="h-4 w-4" /> Baixar extensão (.zip)</Button>
+          </div>
+          <div className="mt-4 rounded-lg bg-secondary/50 p-4 text-xs space-y-2">
+            <p className="font-semibold text-sm">Como instalar:</p>
+            <p>1. Baixe e descompacte o arquivo .zip</p>
+            <p>2. No Chrome, acesse <code>chrome://extensions</code></p>
+            <p>3. Ative o <strong>Modo desenvolvedor</strong> (canto superior direito)</p>
+            <p>4. Clique em <strong>Carregar sem compactação</strong> e selecione a pasta descompactada</p>
+            <p>5. Clique no ícone da peça de quebra-cabeça e fixe o "Agente de Evolução"</p>
+            <p className="pt-2 text-primary font-medium">6. Clique no ícone da extensão e no botão "Conectar automaticamente" (você deve estar logado neste painel).</p>
+          </div>
         </Card>
 
         <Card className="p-6">
