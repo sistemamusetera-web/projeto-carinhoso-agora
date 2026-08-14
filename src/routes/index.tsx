@@ -6,7 +6,9 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: a extensao n está funcionando, analise e corrija está com problema de se conectar ao site
+ * TEXTO DO USUÁRIO: ao clicar no botao gerar e preencher da extensao saiu essa respostas: Erro: Erro de Conexão: O site não respondeu. Verifique se o Painel está aberto e se a URL está correta.
+ *
+ * quero que remova a opcao de preecnher/configurar manuakmente. ja deixe essa config embutida e configurada automaticamente
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
