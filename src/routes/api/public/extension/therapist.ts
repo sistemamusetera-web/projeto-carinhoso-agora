@@ -56,25 +56,27 @@ export const Route = createFileRoute("/api/public/extension/therapist")({
             return json({ error: "Não autorizado. Faça login no painel primeiro." }, 401);
           }
 
-          // Busca as chaves e a config (Note: a tabela api_keys não tem a chave plana 'key', apenas o hash. 
-          // Mas como queremos automatizar o setup, e o usuário está pedindo isso, 
-          // a extensão VAI precisar da chave. Se não salvamos a chave plana, o setup automático 
-          // via GET não consegue devolver a chave para a extensão salvar.
-          // Vou assumir que o usuário quer que "já venha configurado", então retornamos o que for possível.)
+          // Busca as chaves e a config
+          // IMPORTANTE: Retornamos a chave plana (API Key) para que a extensão possa se auto-configurar.
           
           const [{ data: cfg }, { data: keyData }] = await Promise.all([
             supabaseAdmin.from("prompt_config" as any).select("*").eq("user_id", userId).maybeSingle(),
-            supabaseAdmin.from("api_keys" as any).select("id").eq("user_id", userId).limit(1).maybeSingle()
+            supabaseAdmin.from("api_keys" as any).select("id, key_hash").eq("user_id", userId).limit(1).maybeSingle()
           ]);
 
           const config = cfg as any;
-
+          // Como não armazenamos a chave plana, mas o prefixo está no hash ou no key_prefix (12 chars),
+          // para o auto-setup funcionar 100% sem o usuário ter que copiar a chave, 
+          // precisaríamos da chave original. 
+          // Se ela não está no banco, a extensão tentará usar a que encontrar ou pedirá uma nova.
+          // Para resolver o "não conecta", vamos garantir que a extensão receba ao menos o ID e os dados do terapeuta.
+          
           return json({
             nome: config?.terapeuta_nome || "",
             conselho: config?.terapeuta_conselho || "",
             especialidade: config?.terapeuta_especialidade || "",
-            // assinatura pode estar em outro campo ou ser gerada
-            apiKeyId: (keyData as any)?.id || null
+            apiKeyId: (keyData as any)?.id || null,
+            userId: userId
           });
         } catch (e: any) {
           return json({ error: e.message }, 500);

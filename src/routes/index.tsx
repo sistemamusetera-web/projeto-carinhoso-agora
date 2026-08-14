@@ -6,7 +6,7 @@
  * Se for apenas uma pergunta ou conversa, responda no chat em português, sem alterar nenhum arquivo.
  * Nunca insira o texto enviado como conteúdo dentro do site ou da página.
  *
- * TEXTO DO USUÁRIO: a extensao nova nao está vindo configurada, continua com a opcao de configurar manualmente, corrija
+ * TEXTO DO USUÁRIO: a extensao n está se conectando no site, corrija
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
